@@ -1,88 +1,69 @@
 # Content model
 
-Content is a set of small JSON files, mirrored one-to-one between the repo and the bucket:
+Content is a set of small files, one per entry or one per collection as the loaders declare (see [Schema](schema.md#storage)), mirrored between the repo and the bucket:
 
 ```
-routes.json            index of every page: template, locales, timestamps
-site.json              sitewide fields (navbar, footer, title)
-index.json             fields of the home page
-about/index.json       fields of /about
-blog/hello/index.json  fields of /blog/hello
+Repo                          Bucket
+src/data/site.json            /_gratis/content/site.json          the `site` single
+src/data/home.json            /_gratis/content/home.json          the `home` single
+src/data/posts/hello.json     /_gratis/content/posts/hello.json   entry `hello` of `posts`
+src/data/tags.json            /_gratis/content/tags.json          every `tags` entry
+                              /_gratis/routes.json                index of every page
 ```
 
-In the repo they live under `content/`. In the bucket they sit at the root, so each page's JSON is next to its HTML (`/about/index.html`, `/about/index.json`). All of it is public, like the pages it renders.
+In the repo the files sit wherever the loaders point. In the bucket a per-entry collection is a folder named after it and a per-collection file is `<collection>.json` (or `.md` for Markdown entries); `schema.json` records the mapping so the admin, `deploy` and `pull` agree. All of it is public, like the pages it renders.
+
+## Entry files
+
+An entry file holds that entry's fields and nothing else:
+
+```json
+{
+  "title": "Hello!",
+  "date": "2026-10-18",
+  "body": "Welcome to my site.",
+  "tags": ["astro", "cms"]
+}
+```
+
+A reference holds the id of the referenced entry. A single's file has the same shape. A per-collection file holds a map from id to entry. A Markdown entry holds the fields in frontmatter and `body` as the file body. Localized fields hold a locale map instead of a value; see [Localization](localization.md#content).
+
+Entry ids are what the loader gives them: the path without extension for `glob`, the key for `file`. They double as route params (see [Rendering](rendering.md#template-id)), so they are slugs. Changing one is a delete plus a create.
 
 ## `routes.json`
 
 ```json
 {
   "pages": {
-    "/": { "template": "/", "updated": "2026-10-18T10:00:00Z" },
-    "/about": { "template": "/about", "updated": "2026-10-18T10:00:00Z" },
-    "/blog/hello": { "template": "/blog/[slug]", "updated": "2026-10-18T10:00:00Z" }
+    "/": {
+      "template": "/",
+      "deps": { "entries": ["home", "site", "posts/hello", "posts/world"], "collections": { "posts": ["date"] } },
+      "updated": "2026-10-18T10:00:00Z"
+    },
+    "/blog/hello": {
+      "template": "/blog/[slug]",
+      "entry": "posts/hello",
+      "deps": { "entries": ["posts/hello", "site", "tags/astro", "tags/cms"], "collections": {} },
+      "updated": "2026-10-18T10:00:00Z"
+    },
+    "/tags/astro": {
+      "template": "/tags/[tag]",
+      "entry": "tags/astro",
+      "deps": { "entries": ["tags/astro", "site", "posts/hello"], "collections": { "posts": ["tags"] } },
+      "updated": "2026-10-18T10:00:00Z"
+    }
   },
   "_pending": []
 }
 ```
 
-The index is the only file that knows which pages exist. The sitemap, the admin's page list and "re-render everything" read it and nothing else, so no bucket listing is ever needed. It carries the i18n settings and per-page locales once the site has more than one locale (see [Localization](localization.adr.md)), and the `_pending` list used for recovery (see [Edit flow](edit-flow.md#consistency-and-recovery)). Nothing from the page files is duplicated into it.
+The index is the only file that knows which pages exist. The sitemap, the admin's page list and "re-render everything" read it and nothing else, so no bucket listing is ever needed. The build writes it from the collections and the route patterns; the admin updates it as entries are created and deleted. It carries the i18n settings and per-page locales once the site has more than one locale (see [Localization](localization.md#routing)), and the `_pending` list used for recovery (see [Edit flow](edit-flow.md#consistency-and-recovery)). Nothing from the entry files is duplicated into it.
 
-## Page and site files
+## Dependencies
 
-A page file holds that page's fields and nothing else:
+Each page records what the renderer read while producing it, so a save affects exactly the pages it should:
 
-```json
-{
-  "heading": "Hello!",
-  "subheading": "Welcome to my site!",
-  "contacts": [
-    { "email": "john@example.com" },
-    { "email": "jane@example.com" }
-  ]
-}
-```
+- `entries`: every entry whose fields appear on the page: its own entry, singles like `site`, anything reached through a reference, and every entry a query returned. A change to any of them re-renders the page.
+- `collections`: every collection the page queried, with the fields the query sorts or filters by. Creating or deleting an entry of that collection re-renders the page, and so does changing one of the listed fields on any of its entries, because that can change which entries match. Changing an unlisted field on an entry not in `entries` does not.
 
-`site.json` has the same shape for sitewide fields. Localized fields hold a locale map instead of a value; see the ADR.
-
-## Schema
-
-The developer declares the fields in `gratis.config.ts`, per template and for the site. The build compiles it to `schema.json`, which the SPA renders its forms from, and validates every helper call in the template pass against it: an undeclared field or a type mismatch fails the build.
-
-```ts
-import { defineSchema, text, markdown, image, link, boolean, select, list, tabs, section, row } from 'gratis';
-
-export default defineSchema({
-  site: {
-    title: text(),
-    nav: list({ label: text(), href: link() }),
-  },
-  templates: {
-    '/': {
-      heading: text({ label: 'Headline' }),
-      intro: markdown(),
-    },
-    '/about': tabs({
-      Content: {
-        heading: text(),
-        body: markdown(),
-        contacts: list({ email: text() }),
-      },
-      SEO: section('Search engines', {
-        metaTitle: text({ localized: true }),
-        ...row({ ogImage: image(), ogImageAlt: text() }),
-      }),
-    }),
-    '/blog/[slug]': {
-      title: text(),
-      tone: select({ options: ['news', 'essay'] }),
-      body: markdown(),
-    },
-  },
-});
-```
-
-- Field types: `text`, `markdown`, `image`, `link`, `boolean`, `select` with options, and `list` (a repeater over a fixed sub-schema, one level deep). Deliberately few; anything richer is out of scope.
-- Every field takes `label`, defaulting to a readable form of its key, and `localized`, defaulting by type (see [Localization](localization.md#content)). `text` takes a `multiline` flag.
-- Layout: `tabs` groups fields into tabs, `section` into a titled, collapsible group, `row` places fields side by side. A plain object is a flat list. The MVP renders the flat list only; the vocabulary is fixed now so schemas don't change later.
-- Template keys are template ids (see [Rendering](rendering.md#template-id)). A dynamic pattern makes the template a collection the editor can add pages to.
-- The config is TypeScript so the field keys can type the helpers later; nothing else depends on it.
+A static relation (the editor picked a post in a reference field) is an entry dependency only. A dynamic one (the template queries the last three posts) is the collection plus the matched entries. The build computes the initial dependencies by rendering every page in Node, the admin recomputes a page's dependencies each time it renders it, and nothing is declared by hand.

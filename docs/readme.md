@@ -6,7 +6,7 @@ A content editor for static sites that runs with no servers, no build pipeline a
 
 The browser does the job a build server or an application server would normally do. Hardware is fast, browsers are powerful, and web standards are stable and backwards-compatible, so this is a reasonable place to put the logic.
 
-Gratis is incrementally adoptable: it attaches to an ordinary Astro project as an integration, the only code change is reading values through its helpers, and the built site is byte-identical to one built without it.
+Gratis is incrementally adoptable: it attaches to an ordinary Astro project as an integration, the only code change is declaring a content collection with its `defineCollection` and reading it through its getters, one collection at a time, and the built site is byte-identical to one built without it.
 
 ## Who it's for
 
@@ -15,7 +15,7 @@ Gratis is for the long tail of tiny sites that a developer builds once and then 
 Explicit non-goals:
 
 - Drafts, scheduling, review workflows, previews
-- Relations between content types, taxonomies, search
+- Anything beyond a reference field: back-references, joins, search
 - Large sites (hundreds of pages) or high-frequency editing by many people
 - Sites that handle payments, accounts or personal data
 - "Top-notch" security. Gratis accepts a modest security compromise in exchange for having no moving parts. See [Authentication](auth.md).
@@ -44,8 +44,9 @@ A Gratis site has no scheduled maintenance. If nobody touches it for ten years, 
 
 - [Architecture](architecture.md): components, bucket and repo layout
 - [Astro integration](astro-integration.md): adoption, dev and preview, the two-pass build, deploy and pull
-- [Content model](content-model.md): `routes.json`, per-page JSON, the declared schema, field types
-- [Rendering](rendering.md): helpers, sentinel templates and the pure `render()` function
+- [Schema](schema.md): collections on top of Astro's, field types, references, storage formats
+- [Content model](content-model.md): entry files, `routes.json`, dependencies
+- [Rendering](rendering.md): getters and queries, sentinel templates and the pure `render()` function
 - [Edit flow](edit-flow.md): save fan-out, uploads, consistency and recovery
 - [Localization](localization.md): locale maps per value, layout-agnostic routing
 - [Caching and CDN](caching.md): Cloudflare in front of S3, why nothing is ever purged

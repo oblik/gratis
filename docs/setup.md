@@ -1,6 +1,6 @@
 # Setup
 
-`npx astro add gratis` adds the integration to an existing project. `gratis init` then does, or prints exact instructions for:
+`npx astro add gratis` adds the integration to an existing project and scaffolds `src/content.config.ts` with a `site` single (see [Schema](schema.md)). `gratis init` then does, or prints exact instructions for:
 
 1. Create the bucket with static website hosting, versioning, a CORS rule allowing `GET`/`PUT`/`DELETE` from the site origin with `ETag` exposed, and a public-read bucket policy (optionally restricted to Cloudflare IPs).
 2. Create the IAM user(s) and keys (see [Authentication](auth.md#setup)).

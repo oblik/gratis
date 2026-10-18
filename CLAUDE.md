@@ -10,8 +10,9 @@ Read [docs/readme.md](docs/readme.md) for the pitch, audience and non-goals. Loa
 
 - [docs/architecture.md](docs/architecture.md): components, bucket and repo layout
 - [docs/astro-integration.md](docs/astro-integration.md): adoption, dev/preview emulator, two-pass build, deploy and pull
-- [docs/content-model.md](docs/content-model.md): `routes.json`, per-page JSON, the declared schema, field types
-- [docs/rendering.md](docs/rendering.md): helpers, sentinel templates, the pure `render()` function
+- [docs/schema.md](docs/schema.md): collections on top of Astro's, field types, references, storage formats, mixing with plain collections
+- [docs/content-model.md](docs/content-model.md): entry files, `routes.json`, per-page dependencies
+- [docs/rendering.md](docs/rendering.md): getters and queries, sentinel templates, the pure `render()` function
 - [docs/edit-flow.md](docs/edit-flow.md): save fan-out, uploads, optimistic locking, recovery
 - [docs/localization.md](docs/localization.md): locale maps per value, layout-agnostic routing
 - [docs/caching.md](docs/caching.md): Cloudflare in front of S3, no purging

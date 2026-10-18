@@ -1,8 +1,8 @@
-# One JSON per page with locale maps, not one JSON per locale
+# One file per entry with locale maps, not one file per locale
 
 Repeaters decide it. Reordering a list must reorder every translation at once, which is natural when the item is one object with per-value maps and a mess across files. A single file also keeps all translations of a field next to each other, so a diff, a review or "translate what's missing" is one file and one field at a time, and the other languages give an AI or a translator the meaning of the text.
 
-Per-value maps rather than a per-locale block at the top of the page file for the same reason: the unit that gets reordered, duplicated or deleted is the item, and its translations must travel with it.
+Per-value maps rather than a per-locale block at the top of the entry file for the same reason: the unit that gets reordered, duplicated or deleted is the item, and its translations must travel with it.
 
 # Gratis owns content, not routing
 

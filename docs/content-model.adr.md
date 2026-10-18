@@ -1,7 +1,11 @@
 # Split files, not a single `content.json`
 
-One file for everything was the first design. Per-page files win on four counts: optimistic locking becomes per file, so editors on different pages never conflict; files stay small however many pages and locales exist; the content sits next to the HTML it renders, in the bucket and in the repo; and `pull`, `deploy` and `rclone` become plain file syncs. The cost is one index file, `routes.json`, which every save shares and which carries the recovery marker.
+One file for everything was the first design. Per-entry files win on three counts: optimistic locking becomes per entry, so editors on different entries never conflict; files stay small however many entries and locales exist; and `pull`, `deploy` and `rclone` become plain file syncs. The cost is one index file, `routes.json`, which every save shares and which carries the recovery marker. A per-collection file is allowed where the developer wants it, with the locking cost stated (see [Schema](schema.adr.md)).
 
-# A declared schema, not one inferred from helper calls
+# Content by collection, not next to the page
 
-An earlier draft generated the schema from the helper calls recorded in the template pass. It fails in three ways: a JSON string cannot tell a text field from markdown or a select with options; two helper calls for the same field could disagree on type or `localized`; and the admin form needs a layout (tabs, sections, rows) that no helper call can express. So the developer declares the schema in `gratis.config.ts`, the build compiles it to `schema.json`, and the template pass validates the helper calls against it instead of defining it.
+The previous layout put each page's JSON beside its HTML. Once content is per entry, an entry may have no page (a tag), one page, or several (a post also listed on the home page), so there is no single HTML file to sit next to. Content lives under `/_gratis/content/` in the layout the loaders declare, and `routes.json` moves beside it, which also keeps Gratis's files out of the site's route space.
+
+# Dependencies recorded by the renderer, not declared
+
+The template pass renders one placeholder per collection and can't know which entries a page will reach; the renderer, filling a concrete route, can. Recording them per page in `routes.json` makes the fan-out exact, lets "re-render everything" rebuild them from scratch, and costs nothing the save wasn't doing already.
