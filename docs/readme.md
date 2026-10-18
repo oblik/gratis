@@ -6,6 +6,8 @@ A content editor for static sites that runs with no servers, no build pipeline a
 
 The browser does the job a build server or an application server would normally do. Hardware is fast, browsers are powerful, and web standards are stable and backwards-compatible, so this is a reasonable place to put the logic.
 
+Gratis is incrementally adoptable: it attaches to an ordinary Astro project as an integration, the only code change is reading values through its helpers, and the built site is byte-identical to one built without it.
+
 ## Who it's for
 
 Gratis is for the long tail of tiny sites that a developer builds once and then wants to stop thinking about: the coffee shop down the street, a personal blog, a one-page portfolio, a club or a small practice. The site owner needs to change a heading, update opening hours, swap a photo or add a menu item without calling the developer. Nobody needs drafts, workflows, approval chains or a content API.
@@ -40,11 +42,15 @@ A Gratis site has no scheduled maintenance. If nobody touches it for ten years, 
 
 ## Docs
 
-- [Architecture](architecture.md): components and bucket layout
-- [Content model](content-model.md): `content.json`, `schema.json`, field types
-- [Rendering](rendering.md): DOM-marked templates and the pure `render()` function
+- [Architecture](architecture.md): components, bucket and repo layout
+- [Astro integration](astro-integration.md): adoption, dev and preview, the two-pass build, deploy and pull
+- [Content model](content-model.md): `routes.json`, per-page JSON, the declared schema, field types
+- [Rendering](rendering.md): helpers, sentinel templates and the pure `render()` function
 - [Edit flow](edit-flow.md): save fan-out, uploads, consistency and recovery
+- [Localization](localization.md): locale maps per value, layout-agnostic routing
 - [Caching and CDN](caching.md): Cloudflare in front of S3, why nothing is ever purged
 - [Authentication](auth.md): password-encrypted IAM keys, threat model
 - [Setup](setup.md): what `gratis init` does
-- [Roadmap](roadmap.md): other SSGs, storage, CDNs, hardening adapters, open risks
+- [Roadmap](roadmap.md): the MVP, what comes next, other SSGs, storage, CDNs, open risks
+
+Each `<topic>.adr.md` next to a doc records why the chosen design beat the alternatives.
