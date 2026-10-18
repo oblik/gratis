@@ -2,18 +2,28 @@
 
 ## What it is
 
-A content editor for static sites that runs with no servers, no build pipeline and no third-party CMS. The site is plain files in an S3 bucket, served through Cloudflare. The admin is a single-page app that lives in the same bucket. When an editor changes something, their browser re-renders the affected pages and writes them straight back to the bucket.
+A content editor for static sites that runs with no servers, no build pipeline, and no third-party CMS. The site is plain files in an S3 bucket, served through Cloudflare. The admin is a single-page app that lives in the same bucket. When an editor changes something, their browser re-renders the affected pages and writes them straight back to the bucket.
 
-The browser does the job a build server or an application server would normally do. Hardware is fast, browsers are powerful, and web standards are stable and backwards-compatible, so this is a reasonable place to put the logic.
+The browser does the job a build server or an application server would normally do. Hardware in modern laptops is fast, browsers are powerful, and web standards are stable and backwards-compatible, so there's no actual _need_ for a server.
 
-Gratis is incrementally adoptable: it attaches to an ordinary Astro project as an integration, the only code change is declaring a content collection with its `defineCollection` and reading it through its getters, one collection at a time, and the built site is byte-identical to one built without it.
+Gratis is incrementally adoptable: it attaches to an ordinary Astro project as an integration and can be added to one [content collection](https://docs.astro.build/en/guides/content-collections/) at a time. The built site is byte-identical to one built without Gratis.
+
+### Idea origin
+
+1. Suppose you have a simple single-page static site
+2. The site owner wants to change the heading in the header
+3. This essentially amounts to simply changing the text inside the HTML, nothing more
+
+Gratis does exactly that. The user's browser directly modifies the hosted HTML file.
+
+It can't get any simpler than that. No need for servers. Just update the fucking HTML file.
 
 ### Why "Gratis"
 
 "Gratis" means "free", and the admin is free in two ways:
 
 - **Free to adopt.** An existing Astro site gets an admin with hardly any effort: no migration, no new hosting, no rewrite.
-- **Free to run.** An S3 bucket and a free CDN cost almost nothing, yet the result is an insanely reliable and powerful "non-static static" site: the reliability and affordability of a static website, with many of the benefits of a dynamic one and a user-friendly UI.
+- **Free to run.** An S3 bucket and a free CDN cost almost nothing, yet scale to infinity page views per second. You get the reliability and affordability of a static site, with many of the benefits of a dynamic one. A dynamic static site.
 
 ## Who it's for
 
