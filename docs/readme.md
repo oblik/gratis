@@ -8,6 +8,13 @@ The browser does the job a build server or an application server would normally 
 
 Gratis is incrementally adoptable: it attaches to an ordinary Astro project as an integration, the only code change is declaring a content collection with its `defineCollection` and reading it through its getters, one collection at a time, and the built site is byte-identical to one built without it.
 
+### Why "Gratis"
+
+"Gratis" means "free", and the admin is free in two ways:
+
+- **Free to adopt.** An existing Astro site gets an admin with hardly any effort: no migration, no new hosting, no rewrite.
+- **Free to run.** An S3 bucket and a free CDN cost almost nothing, yet the result is an insanely reliable and powerful "non-static static" site: the reliability and affordability of a static website, with many of the benefits of a dynamic one and a user-friendly UI.
+
 ## Who it's for
 
 Gratis is for the long tail of tiny sites that a developer builds once and then wants to stop thinking about: the coffee shop down the street, a personal blog, a one-page portfolio, a club or a small practice. The site owner needs to change a heading, update opening hours, swap a photo or add a menu item without calling the developer. Nobody needs drafts, workflows, approval chains or a content API.
@@ -22,7 +29,7 @@ Explicit non-goals:
 
 The day a site needs any of the above, the honest answer is "use a real CMS", and Gratis should make that easy rather than tempting you to bolt features on.
 
-## Why
+## Why use it
 
 Every existing option for giving a non-technical person an editor on a static site depends on something that rots:
 
