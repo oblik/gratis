@@ -57,18 +57,6 @@ Gratis's bet is different: depend only on things that already have, or can reaso
 
 A Gratis site has no scheduled maintenance. If nobody touches it for ten years, it keeps serving and it keeps being editable. The only code that can break is Gratis's own renderer, and that risk is bounded by design (see [Consistency and recovery](edit-flow.md#consistency-and-recovery)).
 
-## Docs
+---
 
-- [Architecture](architecture.md): components, bucket and repo layout
-- [Astro integration](astro-integration.md): adoption, dev and preview, the two-pass build, deploy and pull
-- [Schema](schema.md): collections on top of Astro's, field types, references, storage formats
-- [Content model](content-model.md): entry files, `routes.json`, dependencies
-- [Rendering](rendering.md): getters and queries, sentinel templates and the pure `render()` function
-- [Edit flow](edit-flow.md): save fan-out, uploads, consistency and recovery
-- [Localization](localization.md): locale maps per value, layout-agnostic routing
-- [Caching and CDN](caching.md): Cloudflare in front of S3, why nothing is ever purged
-- [Authentication](auth.md): password-encrypted IAM keys, threat model
-- [Setup](setup.md): what `gratis init` does
-- [Roadmap](roadmap.md): the MVP, what comes next, other SSGs, storage, CDNs, open risks
-
-Each `<topic>.adr.md` next to a doc records why the chosen design beat the alternatives.
+See [CLAUDE.md](../CLAUDE.md) for the docs overview.
