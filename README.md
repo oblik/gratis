@@ -59,4 +59,4 @@ A Gratis site has no scheduled maintenance. If nobody touches it for ten years, 
 
 ---
 
-See [CLAUDE.md](../CLAUDE.md) for the docs overview.
+See [CLAUDE.md](CLAUDE.md) for the docs overview.

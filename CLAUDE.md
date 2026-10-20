@@ -6,7 +6,7 @@ Nothing is implemented yet; the docs are the design. Astro is the first SSG targ
 
 ## Docs
 
-Read [docs/readme.md](docs/readme.md) for the pitch, audience and non-goals. Load the rest only when relevant to the task:
+Read [README.md](README.md) for the pitch, audience and non-goals. Load the rest only when relevant to the task:
 
 - [docs/architecture.md](docs/architecture.md): components, bucket and repo layout
 - [docs/astro-integration.md](docs/astro-integration.md): adoption, dev/preview emulator, two-pass build, deploy and pull
@@ -21,10 +21,3 @@ Read [docs/readme.md](docs/readme.md) for the pitch, audience and non-goals. Loa
 - [docs/roadmap.md](docs/roadmap.md): the MVP, listings/sitemap design, other SSGs/storage/CDNs, open risks
 
 A `<topic>.md` defines the chosen design only. The `<topic>.adr.md` next to it records why it beat the alternatives. Keep rationale out of the main docs and definitions out of the ADRs.
-
-## Guardrails
-
-- Keep scope small. Drafts, previews, workflows, relations, search: say no (see non-goals in the readme).
-- Every dependency must plausibly last decades: S3 API, a CDN, the browser, plain files.
-- The renderer must stay a pure function of the templates and the content files so the whole site can be regenerated at any time.
-- The real build output must stay byte-identical to the same project without Gratis; markers live only in the template pass.
