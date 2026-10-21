@@ -7,7 +7,7 @@ A bucket can verify exactly one kind of credential: a SigV4 signature made with 
 ## Setup
 
 - The developer creates one IAM user per editor, with an inline policy allowing `GetObject`, `PutObject`, `DeleteObject` and `ListBucket` on this one bucket and nothing else, and generates an access key pair.
-- For each editor, `/_gratis/auth/<username>.json` stores that key pair encrypted with AES-GCM under a key derived from the editor's password with PBKDF2 (WebCrypto, high iteration count; Argon2id via a small wasm module is a later option).
+- For each editor, `/_gratis/auth/<username>.json` stores that key pair encrypted with AES-GCM under a key derived from the editor's password with PBKDF2 (WebCrypto, SHA-256, 600,000 iterations; Argon2id via a small wasm module is a later option). Next to the ciphertext, in plaintext, it holds the KDF parameters and the storage location the key is for: the S3 REST endpoint (path style, since a bucket named after a hostname has dots) and the region.
 
 ## Login
 

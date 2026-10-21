@@ -1,0 +1,17 @@
+---
+import { getEntry } from 'gratis/astro';
+
+const site = await getEntry('site');
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <meta property="og:title" content={site.title}>
+    <title>{site.title}</title>
+  </head>
+  <body>
+    <h1>{site.title}</h1>
+    <p>A tiny static site edited from <a href="/admin/">/admin/</a>.</p>
+  </body>
+</html>

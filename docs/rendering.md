@@ -76,6 +76,19 @@ Because it's a pure function of the template and the content files, the whole si
 
 The same renderer runs in Node at build and deploy time, so markdown rendering must use one implementation for both environments. A reference to a missing entry renders nothing.
 
+### Output equivalence
+
+A rendered page is semantically identical to the build's page, not byte-identical. The renderer serializes as `<!DOCTYPE name>` followed by `documentElement.outerHTML`, which normalizes what the HTML parser already normalized:
+
+- Boolean and empty attributes gain `=""`: `checked` becomes `checked=""`.
+- Named character references that need no escaping become characters: `&copy;` becomes `©`. `&amp;`, `&lt;`, `&gt;`, `&quot;` and `&nbsp;` stay escaped where the serializer requires it.
+- Implied elements appear: a `<tr>` directly in `<table>` gets its `<tbody>`.
+- The newline right after `<pre>` or `<textarea>`, which the parser drops, is gone.
+
+Void elements, SVG children, whitespace, comments, and the contents of `<script>`, `<style>` and `<template>` round-trip unchanged.
+
+The renderer takes a `DOMParser` as an argument: the browser's own in the admin, jsdom's in Node. Both produce byte-identical output for the same template and content, so a page rendered in the admin and the same page rendered at deploy are the same bytes.
+
 ## The one constraint
 
 Anything derived from a read in JavaScript, like `post.title.toUpperCase()`, a class chosen by content, `.filter()` or `.slice()` after `getCollection`, or a param computed from a field, renders correctly in dev and in the real build but can't be reproduced by the editor. Queries go in `getCollection`, conditionals in `If`. A build-time check that renders each page with the current content and compares it to the real build is planned (see [Roadmap](roadmap.md#build-time-content-check)); until then it is a documented rule.

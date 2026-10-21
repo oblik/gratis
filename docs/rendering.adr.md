@@ -17,3 +17,11 @@ The first helpers read "the current page" from an async context: `field('heading
 # Astro first
 
 Astro's default output is plain HTML with no hydration payload: the template is the page. Frameworks that ship a serialized data payload alongside the HTML (see [Roadmap](roadmap.md#other-static-site-generators)) carry the same content in a second place that would also need updating.
+
+# jsdom in Node
+
+The Node renderer needs a DOM whose parse and serialize match the browser's, or pages would change depending on where they were rendered. A sample of real Astro output (entities, boolean attributes, SVG, `<template>`, a table without `<tbody>`, `<pre>` and `<textarea>` with a leading newline, `<script>` containing `</div>`) was round-tripped through the browser's `DOMParser` and three Node DOMs. jsdom, which parses with parse5 per the HTML spec, matched the browser byte for byte. linkedom left `<` and `&` unescaped inside `<title>`, which would let content inject markup. happy-dom kept the newline after `<pre>` that the parser is required to drop. jsdom is heavy, but it runs only at build and deploy time, never in the admin.
+
+# Semantic, not byte, equivalence with the build
+
+Astro's serializer and the DOM's differ in harmless ways (see [Rendering](rendering.md#output-equivalence)). Matching Astro's bytes would mean a hand-written serializer imitating another project's output choices, which is exactly the kind of code that rots. Browsers render both forms identically, so the first edit of a page normalizes it once and nothing else changes.

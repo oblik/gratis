@@ -1,0 +1,10 @@
+---
+import { isTemplateMode } from './mode.js';
+
+// In template mode `when` is a sentinel; the marker carries its scope and field.
+const { when } = Astro.props;
+const ref = isTemplateMode() && String(when).match(/^\{\{gratis:(.+)\}\}$/)?.[1];
+---
+{ref ? (
+  <Fragment set:html={`<!--gratis:if ${ref}-->`} /><slot /><Fragment set:html="<!--/gratis:if-->" />
+) : when ? <slot /> : null}

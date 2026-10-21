@@ -2,7 +2,35 @@
 
 ## MVP
 
-One single with one text field. `gratis init`, deploy to S3 behind Cloudflare, log in to `/admin/`, change the field, see the change on the site. Everything else below comes after that works end to end.
+Done: one `site` single with one text field, deployed to S3 behind Cloudflare at `https://demo.gratis.build`, edited from `/admin/`, the change visible on the next request with no purge.
+
+### What exists
+
+```
+packages/gratis/      `gratis` (integration), `gratis/astro` (defineCollection, file, text, getEntry, Each, If), `gratis/renderer`
+  src/astro/cli.js    `gratis deploy` and `gratis pull`
+  src/admin/          the SPA (plain DOM, built with Vite into dist/admin); site.js holds the save flow, DOM-free
+examples/basic/       the demo site
+scripts/              setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit: the prototype of `gratis init`
+```
+
+Every script targets `GRATIS_SITE` (default `demo.gratis.build`) and reads credentials from the gitignored `.env`. `scripts/e2e-edit.js <origin>` runs the SPA's own save code from Node against a live site, including a stale-ETag conflict; it is the quickest check that a deployed site still edits.
+
+### Findings
+
+- The admin works only over HTTPS. Browsers expose WebCrypto only in secure contexts, and both unlocking the blob and SigV4 signing need it, so `/admin/` on the HTTP-only S3 website endpoint can't log in. Cloudflare (or any TLS front) is a hard requirement, not an option.
+- The SPA signs against the path-style REST endpoint `https://s3.<region>.amazonaws.com/<bucket>`, because a bucket named after a hostname has dots and breaks virtual-hosted TLS. The endpoint and region live in plaintext in each auth blob.
+- S3 honours `If-Match` on `PutObject` (412 on a stale ETag), so optimistic locking needs nothing beyond the API. `deploy` seeds the editor-owned files with `If-None-Match: *`, so it creates them once and never overwrites them.
+- Cloudflare serves HTML as `DYNAMIC` with `Cache-Control: no-cache`; no purge is needed. Flexible SSL is a Configuration Rule scoped to the one hostname, leaving the zone's mode alone.
+- Astro 7: a collection not made by Astro's `defineCollection` must carry `type: 'content_layer'`. A programmatic `build()` nested in `astro:build:done` works for the template pass; give it its own `cacheDir` so it doesn't share the content store with the real build. The hook's `assets` map (route pattern to output files) is what names the templates and gives `routes.json` each page's `file`.
+- `astro.config` loads `gratis` in plain Node, so the integration entry must not import `.astro` files or `astro:content`; those live in `gratis/astro`, which only Vite loads. The getters import `astro:content` lazily.
+- The build already renders every page with the Node renderer and warns when the result differs from the real build: the start of the [build-time content check](#build-time-content-check).
+
+### Left open
+
+- `deploy` doesn't yet re-render pages whose dependencies changed in the bucket during the build.
+- The renderer rejects `each` and `if` markers; `Each` and `If` emit them, but nothing consumes them yet. No dynamic routes, no async-context middleware (singles don't need it), no validation of reads against the schema.
+- `deploy` assumes `outDir` is `dist`. `npx astro add gratis` is untested.
 
 ## Next, in order
 

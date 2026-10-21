@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Gratis</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main id="app">
+    <form id="login" hidden>
+      <h1>Gratis</h1>
+      <label>Username <input name="username" autocomplete="username" required></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button>Log in</button>
+    </form>
+    <section id="editor" hidden>
+      <header>
+        <h1>Gratis</h1>
+        <a href="/" target="_blank">View site</a>
+        <button type="button" id="rerender">Re-render everything</button>
+        <button type="button" id="logout">Log out</button>
+      </header>
+      <div id="collections"></div>
+    </section>
+    <p id="status" role="status"></p>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

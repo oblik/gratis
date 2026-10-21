@@ -1,0 +1,12 @@
+---
+import { isTemplateMode, sentinel } from './mode.js';
+
+// Lists arrive after the MVP. In template mode `of` is a sentinel and the slot renders one
+// placeholder item between the markers; in real mode it runs once per item.
+const { of } = Astro.props;
+const ref = isTemplateMode() && String(of).match(/^\{\{gratis:(.+)\}\}$/)?.[1];
+const placeholder = new Proxy({}, { get: (_, key) => (typeof key === 'string' ? sentinel('item', key) : undefined) });
+const items = ref ? [placeholder] : (of ?? []);
+const rendered = await Promise.all(items.map((item) => Astro.slots.render('default', [item])));
+---
+{ref && <Fragment set:html={`<!--gratis:each ${ref}-->`} />}<Fragment set:html={rendered.join('')} />{ref && <Fragment set:html="<!--/gratis:each-->" />}

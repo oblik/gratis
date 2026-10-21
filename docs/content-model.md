@@ -37,17 +37,20 @@ Entry ids are what the loader gives them: the path without extension for `glob`,
   "pages": {
     "/": {
       "template": "/",
+      "file": "index.html",
       "deps": { "entries": ["home", "site", "posts/hello", "posts/world"], "collections": { "posts": ["date"] } },
       "updated": "2026-10-18T10:00:00Z"
     },
     "/blog/hello": {
       "template": "/blog/[slug]",
+      "file": "blog/hello/index.html",
       "entry": "posts/hello",
       "deps": { "entries": ["posts/hello", "site", "tags/astro", "tags/cms"], "collections": {} },
       "updated": "2026-10-18T10:00:00Z"
     },
     "/tags/astro": {
       "template": "/tags/[tag]",
+      "file": "tags/astro/index.html",
       "entry": "tags/astro",
       "deps": { "entries": ["tags/astro", "site", "posts/hello"], "collections": { "posts": ["tags"] } },
       "updated": "2026-10-18T10:00:00Z"
@@ -57,7 +60,7 @@ Entry ids are what the loader gives them: the path without extension for `glob`,
 }
 ```
 
-The index is the only file that knows which pages exist. The sitemap, the admin's page list and "re-render everything" read it and nothing else, so no bucket listing is ever needed. The build writes it from the collections and the route patterns; the admin updates it as entries are created and deleted. It carries the i18n settings and per-page locales once the site has more than one locale (see [Localization](localization.md#routing)), and the `_pending` list used for recovery (see [Edit flow](edit-flow.md#consistency-and-recovery)). Nothing from the entry files is duplicated into it.
+The index is the only file that knows which pages exist. `file` is the object key the page is written to, taken from the build so the admin follows Astro's `build.format`. The sitemap, the admin's page list and "re-render everything" read it and nothing else, so no bucket listing is ever needed. The build writes it from the collections and the route patterns; the admin updates it as entries are created and deleted. It carries the i18n settings and per-page locales once the site has more than one locale (see [Localization](localization.md#routing)), and the `_pending` list used for recovery (see [Edit flow](edit-flow.md#consistency-and-recovery)). Nothing from the entry files is duplicated into it.
 
 ## Dependencies
 
