@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { z } from 'astro/zod';
-import { isTemplateMode, state, sentinel } from './mode.js';
+import type { Loader } from 'astro/loaders';
+import { isTemplateMode, state, sentinel } from './mode.ts';
+import type { FieldConfig } from './schema.ts';
 export { default as Each } from './Each.astro';
 export { default as If } from './If.astro';
 
@@ -9,11 +11,16 @@ const fieldSchemas = {
   text: () => z.string(),
 };
 
-export const text = ({ label, localized, multiline } = {}) => ({ type: 'text', label, localized, multiline });
+export const text = ({ label, localized, multiline }: { label?: string; localized?: boolean; multiline?: boolean } = {}): FieldConfig =>
+  ({ type: 'text', label, localized, multiline });
 
-export const file = (path) => ({ kind: 'file', path });
+export const file = (path: string) => ({ kind: 'file' as const, path });
 
-export function defineCollection({ single = false, loader, schema: fields }) {
+export function defineCollection({ single = false, loader, schema: fields }: {
+  single?: boolean;
+  loader: ReturnType<typeof file>;
+  schema: Record<string, FieldConfig>;
+}) {
   if (!single) throw new Error('gratis: only singles are supported so far');
   if (loader?.kind !== 'file') throw new Error('gratis: a single needs file()');
 
@@ -24,7 +31,7 @@ export function defineCollection({ single = false, loader, schema: fields }) {
 
   return {
     // What Astro's own defineCollection sets for a collection with a loader.
-    type: 'content_layer',
+    type: 'content_layer' as const,
     schema,
     loader: {
       name: 'gratis',
@@ -43,11 +50,11 @@ export function defineCollection({ single = false, loader, schema: fields }) {
         watcher?.add(path);
         watcher?.on('change', (changed) => changed === path && sync());
       },
-    },
+    } satisfies Loader,
   };
 }
 
-export async function getEntry(collection, id = collection) {
+export async function getEntry(collection: string, id = collection) {
   const { getEntry } = await import('astro:content');
   const entry = await getEntry(collection, id);
   return entry && { id: entry.id, collection, ...entry.data };

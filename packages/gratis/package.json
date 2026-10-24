@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/astro/integration.js",
-    "./astro": "./src/astro/index.js",
+    ".": "./src/astro/integration.ts",
+    "./astro": "./src/astro/index.ts",
     "./renderer": "./src/renderer/index.ts"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "@rolldown/plugin-babel": "^0.2.4",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.46",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -43,6 +44,6 @@
     "dist"
   ],
   "bin": {
-    "gratis": "./src/astro/cli.js"
+    "gratis": "./src/astro/cli.ts"
   }
 }

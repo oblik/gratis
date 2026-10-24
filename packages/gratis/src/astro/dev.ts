@@ -3,25 +3,26 @@
 // is listed in routes.json, so a save writes only the entry and Astro re-renders on its own.
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { memoryBackend } from '../emulator/index.ts';
-import { state } from './mode.js';
-import { compileSchema } from './schema.js';
+import { memoryBackend, type Backend } from '../emulator/index.ts';
+import { state } from './mode.ts';
+import { compileSchema } from './schema.ts';
 
 const ROUTES = '_gratis/routes.json';
-const json = (value) => JSON.stringify(value, null, 2) + '\n';
-const encode = (text) => new TextEncoder().encode(text);
+const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n';
+const encode = (text: string) => new TextEncoder().encode(text);
 
 // Tells the admin to skip the login and use this origin as its endpoint (see admin/session.ts).
 const LOCAL_META = '<meta name="gratis-storage" content="local">';
 
-export function devBackend({ root, adminDist }) {
+export function devBackend({ root, adminDist }: { root: URL; adminDist: URL }): Backend {
   const memory = memoryBackend({ [ROUTES]: json({ pages: {}, _pending: [] }) });
   const schema = () => compileSchema(state().collections);
-  const sourceOf = (key) => {
+  const sourceOf = (key: string) => {
     const collection = Object.values(schema().collections).find(({ storage }) => key === `_gratis/content/${storage.path}`);
     return collection && new URL(collection.storage.source, root);
   };
-  const orNull = (promise) => promise.catch((error) => (error.code === 'ENOENT' || error.code === 'EISDIR' ? null : Promise.reject(error)));
+  const orNull = <T>(promise: Promise<T>) =>
+    promise.catch((error: NodeJS.ErrnoException) => (error.code === 'ENOENT' || error.code === 'EISDIR' ? null : Promise.reject(error)));
 
   return {
     async read(key) {
@@ -31,7 +32,7 @@ export function devBackend({ root, adminDist }) {
       if (source) return orNull(readFile(source));
       if (key === 'admin/index.html') {
         const html = await orNull(readFile(new URL('index.html', adminDist), 'utf8'));
-        return html && encode(html.replace('<head>', `<head>\n  ${LOCAL_META}`));
+        return html == null ? null : encode(html.replace('<head>', `<head>\n  ${LOCAL_META}`));
       }
       if (key.startsWith('admin/')) return orNull(readFile(new URL(key.slice('admin/'.length), adminDist)));
       return null;

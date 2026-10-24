@@ -2,23 +2,24 @@ import { mkdir, copyFile, cp, rm, readFile, writeFile, access } from 'node:fs/pr
 import { fileURLToPath } from 'node:url';
 import { dirname, relative } from 'node:path';
 import { JSDOM } from 'jsdom';
-import { isTemplateMode, state } from './mode.js';
-import { render } from '../renderer/index.ts';
+import type { AstroIntegration } from 'astro';
+import { isTemplateMode, state } from './mode.ts';
+import { render, type Content, type Deps } from '../renderer/index.ts';
 import { templateId, templateFile } from '../renderer/paths.ts';
-import { compileSchema } from './schema.js';
-import { devBackend } from './dev.js';
+import { compileSchema } from './schema.ts';
+import { devBackend } from './dev.ts';
 import { createEmulator } from '../emulator/index.ts';
 
 const adminDist = new URL('../../dist/admin/', import.meta.url);
-const json = (value) => JSON.stringify(value, null, 2) + '\n';
+const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n';
 
-async function write(url, text) {
+async function write(url: URL, text: string | Uint8Array) {
   await mkdir(dirname(fileURLToPath(url)), { recursive: true });
   await writeFile(url, text);
 }
 
-export default function gratis() {
-  let root;
+export default function gratis(): AstroIntegration {
+  let root: URL;
   return {
     name: 'gratis',
     hooks: {
@@ -32,7 +33,7 @@ export default function gratis() {
         await access(adminDist).catch(() => logger.warn('the admin SPA is not built; run `pnpm build` in packages/gratis'));
         const handle = createEmulator(devBackend({ root, adminDist }), { website: true });
         server.middlewares.use((req, res, next) => {
-          const path = req.url.split('?')[0];
+          const path = req.url!.split('?')[0];
           if (path.startsWith('/_gratis/') || path === '/admin' || path.startsWith('/admin/')) return handle(req, res, next);
           next();
         });
@@ -49,7 +50,7 @@ export default function gratis() {
         try {
           const { build } = await import('astro');
           await build({
-            root,
+            root: fileURLToPath(root),
             outDir: fileURLToPath(scratch),
             cacheDir: fileURLToPath(new URL('node_modules/.astro/gratis/', root)),
             logLevel: 'warn',
@@ -61,7 +62,7 @@ export default function gratis() {
         // 2. Templates, by template id.
         const templates = new URL('_gratis/templates/', dir);
         await rm(templates, { recursive: true, force: true });
-        for (const [pattern, [url]] of state().templateRoutes) {
+        for (const [pattern, [url]] of state().templateRoutes!) {
           await write(new URL(templateFile(templateId(pattern)), templates), await readFile(url));
         }
 
@@ -71,13 +72,13 @@ export default function gratis() {
 
         // 4. routes.json, from rendering every page with the Node renderer. A page that renders
         // differently from the real build derives something from a read the editor can't reproduce.
-        const content = {};
+        const content: Content = {};
         for (const [name, { storage }] of Object.entries(collections)) {
           content[name] = JSON.parse(await readFile(new URL(storage.file, root), 'utf8'));
         }
         const { DOMParser } = new JSDOM('').window;
-        const normalize = (html) => render(html, { content: {} }, { DOMParser }).html;
-        const pages = {};
+        const normalize = (html: string) => render(html, { content: {} }, { DOMParser }).html;
+        const pages: Record<string, { template: string; file: string; deps: Deps; updated: string }> = {};
         const updated = new Date().toISOString();
         for (const [pattern, urls] of assets) {
           if (pattern.includes('[')) {
@@ -109,7 +110,7 @@ export default function gratis() {
           await copyFile(new URL(storage.file, root), target);
         }
 
-        logger.info(`${state().templateRoutes.size} template(s), ${Object.keys(pages).length} page(s)`);
+        logger.info(`${state().templateRoutes!.size} template(s), ${Object.keys(pages).length} page(s)`);
       },
     },
   };

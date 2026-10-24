@@ -8,7 +8,7 @@
     "test": "pnpm -r test",
     "setup:aws": "node --env-file=.env scripts/setup-aws.js",
     "setup:editor": "node --env-file=.env scripts/create-editor.js",
-    "deploy": "pnpm --filter gratis build && node --env-file=.env packages/gratis/src/astro/cli.js deploy --bucket demo.gratis.build --root examples/basic",
+    "deploy": "pnpm --filter gratis build && node --env-file=.env packages/gratis/src/astro/cli.ts deploy --bucket demo.gratis.build --root examples/basic",
     "setup:cloudflare": "node --env-file=.env scripts/setup-cloudflare.js"
   },
   "devDependencies": {

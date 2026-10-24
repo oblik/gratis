@@ -8,8 +8,8 @@ Done: one `site` single with one text field, deployed to S3 behind Cloudflare at
 
 ```
 packages/gratis/      `gratis` (integration), `gratis/astro` (defineCollection, file, text, getEntry, Each, If), `gratis/renderer`
-  src/astro/cli.js    `gratis deploy`, `gratis pull` and `gratis preview`
-  src/astro/dev.js    the emulator's backend in `astro dev`: the loaders' files and the admin build
+  src/astro/cli.ts    `gratis deploy`, `gratis pull` and `gratis preview`
+  src/astro/dev.ts    the emulator's backend in `astro dev`: the loaders' files and the admin build
   src/emulator/       the storage emulator, with folder and in-memory backends
   src/admin/          the SPA, per architecture.md#admin-spa; site.ts (save flow), storage.ts (S3 client and object cache) and auth.ts are framework-free
   src/renderer/       render(), TypeScript that Node runs through type stripping
