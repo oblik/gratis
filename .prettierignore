@@ -1,0 +1,6 @@
+dist/
+.astro/
+.gratis/
+pnpm-lock.yaml
+# Content the admin writes; formatting it would churn on every save.
+examples/basic/src/data/
