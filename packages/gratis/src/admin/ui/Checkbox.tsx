@@ -1,15 +1,21 @@
-import { useId } from 'react';
+import { useId } from 'react'
 
 export interface CheckboxProps {
-  label: string;
-  checked: boolean;
-  onChange(checked: boolean): void;
-  dirty?: boolean;
-  error?: string;
+  label: string
+  checked: boolean
+  onChange(checked: boolean): void
+  dirty?: boolean
+  error?: string
 }
 
-export function Checkbox({ label, checked, onChange, dirty, error }: CheckboxProps) {
-  const id = useId();
+export function Checkbox({
+  label,
+  checked,
+  onChange,
+  dirty,
+  error,
+}: CheckboxProps) {
+  const id = useId()
   return (
     <div className="grid gap-1">
       <label htmlFor={id} className="flex items-center gap-2 font-medium">
@@ -23,9 +29,18 @@ export function Checkbox({ label, checked, onChange, dirty, error }: CheckboxPro
           className="size-4 accent-blue-600"
         />
         {label}
-        {dirty && <span className="size-1.5 rounded-full bg-amber-500" title="Unsaved change" />}
+        {dirty && (
+          <span
+            className="size-1.5 rounded-full bg-amber-500"
+            title="Unsaved change"
+          />
+        )}
       </label>
-      {error && <p id={`${id}-error`} className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p id={`${id}-error`} className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
     </div>
-  );
+  )
 }

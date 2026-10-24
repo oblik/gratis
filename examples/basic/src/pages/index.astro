@@ -1,19 +1,22 @@
 ---
-import { getEntry, getCollection, Each, If } from 'gratis/astro';
+import { Each, getCollection, getEntry, If } from 'gratis/astro'
 
-const site = await getEntry('site');
-const posts = await getCollection('posts', { sort: '-date' });
+const site = await getEntry('site')
+const posts = await getCollection('posts', { sort: '-date' })
 ---
+
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width">
-    <meta property="og:title" content={site.title}>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta property="og:title" content={site.title} />
     <title>{site.title}</title>
   </head>
   <body>
     <h1>{site.title}</h1>
-    <p>A tiny static site edited from <a href="/admin/">/admin/</a>.</p>
+    <p>
+      A tiny static site edited from <a href="/admin/">/admin/</a>.
+    </p>
 
     <h2>Blog</h2>
     <ul>
@@ -22,7 +25,9 @@ const posts = await getCollection('posts', { sort: '-date' });
           <li>
             <a href={`/blog/${post.id}/`}>{post.title}</a>
             <time datetime={post.date}>{post.date}</time>
-            <If when={post.featured}><strong>Featured</strong></If>
+            <If when={post.featured}>
+              <strong>Featured</strong>
+            </If>
           </li>
         )}
       </Each>

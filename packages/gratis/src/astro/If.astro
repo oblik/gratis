@@ -1,10 +1,17 @@
 ---
-import { markerOf } from './mode.ts';
+import { markerOf } from './mode.ts'
 
 // In template mode `when` is a sentinel; the marker carries its scope and field.
-const { when } = Astro.props;
-const ref = markerOf(when);
+const { when } = Astro.props
+const ref = markerOf(when)
 ---
+
 {ref ? (
-  <Fragment set:html={`<!--gratis:if ${ref}-->`} /><slot /><Fragment set:html="<!--/gratis:if-->" />
-) : when ? <slot /> : null}
+  <>
+    <Fragment set:html={`<!--gratis:if ${ref}-->`} />
+    <slot />
+    <Fragment set:html="<!--/gratis:if-->" />
+  </>
+) : when ? (
+  <slot />
+) : null}

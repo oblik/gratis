@@ -7,7 +7,22 @@ The schema is the set of **collections** the admin can edit. A collection is an 
 `src/content.config.ts`:
 
 ```ts
-import { defineCollection, glob, file, text, markdown, image, link, boolean, select, reference, list, tabs, section, row } from 'gratis/astro';
+import {
+  boolean,
+  defineCollection,
+  file,
+  glob,
+  image,
+  link,
+  list,
+  markdown,
+  reference,
+  row,
+  section,
+  select,
+  tabs,
+  text,
+} from 'gratis/astro'
 
 const site = defineCollection({
   single: true,
@@ -16,7 +31,7 @@ const site = defineCollection({
     title: text(),
     nav: list({ label: text(), href: link() }),
   },
-});
+})
 
 const home = defineCollection({
   single: true,
@@ -26,7 +41,7 @@ const home = defineCollection({
     intro: markdown(),
     featured: reference('posts', { multiple: true }),
   },
-});
+})
 
 const posts = defineCollection({
   loader: glob({ pattern: '*.json', base: 'src/data/posts' }),
@@ -42,14 +57,14 @@ const posts = defineCollection({
       ...row({ ogImage: image(), ogImageAlt: text() }),
     }),
   }),
-});
+})
 
 const tags = defineCollection({
   loader: file('src/data/tags.json'),
   schema: { name: text() },
-});
+})
 
-export const collections = { site, home, posts, tags };
+export const collections = { site, home, posts, tags }
 ```
 
 - `single: true` makes a collection with exactly one entry, read with `getEntry('site')`. Everything else is a collection the editor adds entries to.
@@ -58,16 +73,16 @@ export const collections = { site, home, posts, tags };
 
 ## Field types
 
-| Type | Value | Localized by default |
-|---|---|---|
-| `text({ multiline? })` | string | yes |
-| `markdown()` | markdown string | yes |
-| `image()` | upload path | no |
-| `link()` | URL or path | no |
-| `boolean()` | boolean | no |
-| `select({ options })` | one of the options | no |
-| `reference(collection, { multiple? })` | an entry id, or a list of them | no |
-| `list(fields)` | repeater over a fixed sub-schema, one level deep | per sub-field |
+| Type                                   | Value                                            | Localized by default |
+| -------------------------------------- | ------------------------------------------------ | -------------------- |
+| `text({ multiline? })`                 | string                                           | yes                  |
+| `markdown()`                           | markdown string                                  | yes                  |
+| `image()`                              | upload path                                      | no                   |
+| `link()`                               | URL or path                                      | no                   |
+| `boolean()`                            | boolean                                          | no                   |
+| `select({ options })`                  | one of the options                               | no                   |
+| `reference(collection, { multiple? })` | an entry id, or a list of them                   | no                   |
+| `list(fields)`                         | repeater over a fixed sub-schema, one level deep | per sub-field        |
 
 Every field takes `label`, defaulting to a readable form of its key, and `localized`, defaulting as above (see [Localization](localization.md#content)). Deliberately few; anything richer is out of scope.
 
@@ -81,12 +96,12 @@ Every field takes `label`, defaulting to a readable form of its key, and `locali
 
 Gratis writes entries the way the loader reads them. The developer picks the layout and Gratis conforms to it:
 
-| Loader | On disk | Notes |
-|---|---|---|
-| `glob({ pattern: '*.json', base })` | one JSON file per entry; the id is the path without extension | The default. Optimistic locking is per entry. |
-| `file('x.json')` | one JSON file holding every entry, keyed by id | Locking is per collection: two editors saving different entries at once conflict, and the admin retries by refetching and reapplying the one entry it changed. Fine for tags-sized collections. |
-| `file('x.json')` with `single: true` | the entry's fields are the file | |
-| `glob({ pattern: '*.md', base })` | one Markdown file per entry: frontmatter holds the fields, the body is the field named `body`, which must be `markdown()` and is never localized | A site that needs a localized body stores the collection as JSON instead. |
+| Loader                               | On disk                                                                                                                                          | Notes                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `glob({ pattern: '*.json', base })`  | one JSON file per entry; the id is the path without extension                                                                                    | The default. Optimistic locking is per entry.                                                                                                                                                   |
+| `file('x.json')`                     | one JSON file holding every entry, keyed by id                                                                                                   | Locking is per collection: two editors saving different entries at once conflict, and the admin retries by refetching and reapplying the one entry it changed. Fine for tags-sized collections. |
+| `file('x.json')` with `single: true` | the entry's fields are the file                                                                                                                  |                                                                                                                                                                                                 |
+| `glob({ pattern: '*.md', base })`    | one Markdown file per entry: frontmatter holds the fields, the body is the field named `body`, which must be `markdown()` and is never localized | A site that needs a localized body stores the collection as JSON instead.                                                                                                                       |
 
 Markdown is rendered by Gratis's own implementation in every mode, never by Astro's pipeline, so what the editor's browser produces is what the build produces (see [Rendering](rendering.md#the-renderer)). A fenced block renders as plain `<pre><code class="language-x">`; highlighting, if wanted, is the site's client-side concern. MDX is unsupported and `defineCollection` rejects a `.mdx` pattern.
 

@@ -2,13 +2,13 @@
 
 ## Components
 
-| Component | Role | Initial target | Later |
-|---|---|---|---|
-| Static site generator | Produces the site and, in a second pass, the page templates | Astro | Hugo, Eleventy |
-| SSG integration | `defineCollection`, loaders, getters, template pass, schema, dev and preview storage emulator, `gratis` CLI | `gratis/astro` | one per SSG |
-| Object storage | Holds the built site, templates, content, uploads and the admin SPA | AWS S3 | R2 or any S3-compatible store |
-| CDN | TLS, custom domain, caching in front of the bucket | Cloudflare | CloudFront and others |
-| Admin SPA | Editor UI plus the renderer, served from the bucket at `/admin/` | React, Lexical, Tailwind | |
+| Component             | Role                                                                                                        | Initial target           | Later                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------- |
+| Static site generator | Produces the site and, in a second pass, the page templates                                                 | Astro                    | Hugo, Eleventy                |
+| SSG integration       | `defineCollection`, loaders, getters, template pass, schema, dev and preview storage emulator, `gratis` CLI | `gratis/astro`           | one per SSG                   |
+| Object storage        | Holds the built site, templates, content, uploads and the admin SPA                                         | AWS S3                   | R2 or any S3-compatible store |
+| CDN                   | TLS, custom domain, caching in front of the bucket                                                          | Cloudflare               | CloudFront and others         |
+| Admin SPA             | Editor UI plus the renderer, served from the bucket at `/admin/`                                            | React, Lexical, Tailwind |                               |
 
 Nothing else. No application server, no functions, no database, no identity provider. The only Gratis code that runs after deploy is the SPA in the editor's browser. The same renderer runs in Node at build and deploy time, and the integration's storage emulator runs only on the developer's machine.
 

@@ -8,9 +8,7 @@ An entry has one file for all locales. A localized field holds a map from locale
 {
   "heading": { "en": "Hello", "es": "Hola" },
   "photo": "/uploads/a1b2.jpg",
-  "usps": [
-    { "title": { "en": "Fast", "es": "Rápido" }, "icon": "bolt" }
-  ]
+  "usps": [{ "title": { "en": "Fast", "es": "Rápido" }, "icon": "bolt" }]
 }
 ```
 

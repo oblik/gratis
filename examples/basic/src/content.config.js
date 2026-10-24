@@ -1,4 +1,4 @@
-import { defineCollection, file, glob, text, boolean } from 'gratis/astro';
+import { boolean, defineCollection, file, glob, text } from 'gratis/astro'
 
 const site = defineCollection({
   single: true,
@@ -6,7 +6,7 @@ const site = defineCollection({
   schema: {
     title: text(),
   },
-});
+})
 
 const posts = defineCollection({
   loader: glob({ pattern: '*.json', base: 'src/data/posts' }),
@@ -16,6 +16,6 @@ const posts = defineCollection({
     featured: boolean(),
     body: text({ multiline: true }),
   },
-});
+})
 
-export const collections = { site, posts };
+export const collections = { site, posts }

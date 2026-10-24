@@ -2,33 +2,58 @@
 // published blob, save the `site` single, check the website, then check a stale save conflicts.
 // Restores the original title at the end.
 
-import { JSDOM } from 'jsdom';
-import { decryptCredentials } from '../packages/gratis/src/admin/auth.ts';
-import { createStorage, createCache, ConflictError } from '../packages/gratis/src/admin/storage.ts';
-import { loadSite, readEntry, saveEntry } from '../packages/gratis/src/admin/site.ts';
-import { websiteOrigin } from './config.js';
+import { JSDOM } from 'jsdom'
 
-const origin = process.argv[2] ?? websiteOrigin;
-const { DOMParser } = new JSDOM('').window;
+import { decryptCredentials } from '../packages/gratis/src/admin/auth.ts'
+import {
+  loadSite,
+  readEntry,
+  saveEntry,
+} from '../packages/gratis/src/admin/site.ts'
+import {
+  ConflictError,
+  createCache,
+  createStorage,
+} from '../packages/gratis/src/admin/storage.ts'
+import { websiteOrigin } from './config.js'
 
-const blob = await (await fetch(`${origin}/_gratis/auth/admin.json`)).json();
-const keys = await decryptCredentials(blob, process.env.GRATIS_EDITOR_PASSWORD);
-const storage = createStorage({ ...blob.storage, ...keys });
+const origin = process.argv[2] ?? websiteOrigin
+const { DOMParser } = new JSDOM('').window
 
-const site = await loadSite(createCache(storage));
-const original = (await readEntry(site, 'site')).fields.title;
-const title = `Edited ${new Date().toISOString()}`;
+const blob = await (await fetch(`${origin}/_gratis/auth/admin.json`)).json()
+const keys = await decryptCredentials(blob, process.env.GRATIS_EDITOR_PASSWORD)
+const storage = createStorage({ ...blob.storage, ...keys })
 
-const pages = await saveEntry(site, 'site', { title }, { DOMParser });
-const html = await (await fetch(`${origin}/`, { cache: 'no-store' })).text();
-console.log('rendered', pages, '| live page shows the edit:', html.includes(`<h1>${title}</h1>`) && html.includes(`<title>${title}</title>`));
+const site = await loadSite(createCache(storage))
+const original = (await readEntry(site, 'site')).fields.title
+const title = `Edited ${new Date().toISOString()}`
 
-const stale = await loadSite(createCache(storage));
-await saveEntry(stale, 'site', { title: 'lost' }, { DOMParser, etag: '"0000"' }).then(
+const pages = await saveEntry(site, 'site', { title }, { DOMParser })
+const html = await (await fetch(`${origin}/`, { cache: 'no-store' })).text()
+console.log(
+  'rendered',
+  pages,
+  '| live page shows the edit:',
+  html.includes(`<h1>${title}</h1>`) &&
+    html.includes(`<title>${title}</title>`),
+)
+
+const stale = await loadSite(createCache(storage))
+await saveEntry(
+  stale,
+  'site',
+  { title: 'lost' },
+  { DOMParser, etag: '"0000"' },
+).then(
   () => console.log('stale save: NOT rejected'),
   (e) => console.log('stale save rejected:', e instanceof ConflictError),
-);
+)
 
-const fresh = await loadSite(createCache(storage));
-await saveEntry(fresh, 'site', { title: original }, { DOMParser });
-console.log('restored', JSON.stringify(original), '| routes pending:', fresh.routes._pending);
+const fresh = await loadSite(createCache(storage))
+await saveEntry(fresh, 'site', { title: original }, { DOMParser })
+console.log(
+  'restored',
+  JSON.stringify(original),
+  '| routes pending:',
+  fresh.routes._pending,
+)

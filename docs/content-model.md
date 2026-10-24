@@ -38,21 +38,30 @@ Entry ids are what the loader gives them: the path without extension for `glob`,
     "/": {
       "template": "/",
       "file": "index.html",
-      "deps": { "entries": ["home", "site", "posts/hello", "posts/world"], "collections": { "posts": ["date"] } },
+      "deps": {
+        "entries": ["home", "site", "posts/hello", "posts/world"],
+        "collections": { "posts": ["date"] }
+      },
       "updated": "2026-10-18T10:00:00Z"
     },
     "/blog/hello": {
       "template": "/blog/[slug]",
       "file": "blog/hello/index.html",
       "entry": "posts/hello",
-      "deps": { "entries": ["posts/hello", "site", "tags/astro", "tags/cms"], "collections": {} },
+      "deps": {
+        "entries": ["posts/hello", "site", "tags/astro", "tags/cms"],
+        "collections": {}
+      },
       "updated": "2026-10-18T10:00:00Z"
     },
     "/tags/astro": {
       "template": "/tags/[tag]",
       "file": "tags/astro/index.html",
       "entry": "tags/astro",
-      "deps": { "entries": ["tags/astro", "site", "posts/hello"], "collections": { "posts": ["tags"] } },
+      "deps": {
+        "entries": ["tags/astro", "site", "posts/hello"],
+        "collections": { "posts": ["tags"] }
+      },
       "updated": "2026-10-18T10:00:00Z"
     }
   },

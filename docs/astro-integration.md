@@ -14,13 +14,13 @@ An existing site that already uses Astro's i18n routing adopts Gratis without mo
 
 ## Modes
 
-| Mode | Getters return | Storage the admin talks to |
-|---|---|---|
-| `astro dev` | Real values from the content files | Emulator writing entries to the loaders' files and uploads to `public/uploads/`; page writes are ignored because Astro re-renders on its own |
-| `astro build`, real pass | Real values | |
-| `astro build`, template pass | Placeholders that emit sentinels and markers | |
-| `gratis preview` | | Emulator over `dist/` |
-| Production | | S3 through the SigV4 client |
+| Mode                         | Getters return                               | Storage the admin talks to                                                                                                                   |
+| ---------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `astro dev`                  | Real values from the content files           | Emulator writing entries to the loaders' files and uploads to `public/uploads/`; page writes are ignored because Astro re-renders on its own |
+| `astro build`, real pass     | Real values                                  |                                                                                                                                              |
+| `astro build`, template pass | Placeholders that emit sentinels and markers |                                                                                                                                              |
+| `gratis preview`             |                                              | Emulator over `dist/`                                                                                                                        |
+| Production                   |                                              | S3 through the SigV4 client                                                                                                                  |
 
 ## Dev
 
