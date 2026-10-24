@@ -2,12 +2,12 @@
 
 ## MVP
 
-Done: one `site` single with one text field, deployed to S3 behind Cloudflare at `https://demo.gratis.build`, edited from `/admin/`, the change visible on the next request with no purge.
+Done: one `site` single with one text field, deployed to S3 behind Cloudflare at `https://demo.gratis.build`, edited from `/admin/`, the change visible on the next request with no purge. Since then: a `posts` collection of JSON entries with a page each and a home page listing them through a query, created, edited and deleted from the admin.
 
 ### What exists
 
 ```
-packages/gratis/      `gratis` (integration), `gratis/astro` (defineCollection, file, text, getEntry, Each, If), `gratis/renderer`
+packages/gratis/      `gratis` (integration), `gratis/astro` (defineCollection, file, glob, text, boolean, getEntry, getCollection, Each, If), `gratis/renderer`
   src/astro/cli.ts    `gratis deploy`, `gratis pull` and `gratis preview`
   src/astro/dev.ts    the emulator's backend in `astro dev`: the loaders' files and the admin build
   src/emulator/       the storage emulator, with folder and in-memory backends
@@ -34,13 +34,16 @@ Locally, `pnpm --filter example-basic dev` serves the admin at `/admin/` with no
 - `astro preview` can't be extended: it drops the project's Vite plugins and gives integrations no hook, hence `gratis preview`.
 - Astro's dev server sometimes serves the old content for a few seconds after a content file changes, with its own `file()` loader too. On 7.4.1 the first change after startup could stay stale until the next one; 7.4.2 only lags.
 - The build already renders every page with the Node renderer and warns when the result differs from the real build: the start of the [build-time content check](#build-time-content-check).
+- Astro hands `getStaticPaths` props to the page as they are, so the template pass's placeholder entry (a `Proxy`) reaches the page and its reads emit `route` sentinels.
 
 ### Left open
 
 - `deploy` doesn't yet re-render pages whose dependencies changed in the bucket during the build.
-- The renderer rejects `each` and `if` markers; `Each` and `If` emit them, but nothing consumes them yet. No dynamic routes, no async-context middleware (singles don't need it), no validation of reads against the schema.
+- Collections are `glob({ pattern: '*.json' })` only, flat, with `text` and `boolean` fields; no `file()` collections, Markdown entries, `list` or `reference` yet. `getEntry` reads singles only.
+- `Each` lists queries only. A dynamic route has one param, bound to a collection by the placeholder id the template pass builds it at.
+- No async-context middleware: a query placeholder read outside an `Each` is taken to be the page's own entry (a `route` sentinel), and the renderer fails on a page with no entry. No validation of reads against the schema.
 - Node refuses to strip types under `node_modules`, so the published package will need the core compiled to JS (or the integration bundled); in the workspace the symlink's real path sits outside `node_modules`.
-- The emulator has no `ListObjectsV2` yet; nothing uploads.
+- Nothing uploads yet.
 - Lexical isn't installed yet: no field is rich text. The admin has no locales, tabs or lists, so no search params yet either.
 - `deploy` assumes `outDir` is `dist`. `npx astro add gratis` is untested.
 
@@ -48,7 +51,7 @@ Locally, `pnpm --filter example-basic dev` serves the admin at `/admin/` with no
 
 ### Collections, references and queries
 
-The design is agreed (see [Schema](schema.md), [Content model](content-model.md#dependencies) and [Rendering](rendering.md)); the MVP ships singles only. Then collection entries with their pages, `reference` fields, and `getCollection` queries inside `Each`, with the renderer recording dependencies per page.
+The design is agreed (see [Schema](schema.md), [Content model](content-model.md#dependencies) and [Rendering](rendering.md)). Collection entries with their pages and `getCollection` queries inside `Each` exist, with the renderer recording dependencies per page. Next: `reference` and `list` fields, Markdown entries and `file()` collections, then the async-context middleware and the read validation.
 
 ### Pagination and the sitemap
 

@@ -1,0 +1,6 @@
+{
+  "title": "Caching without purging",
+  "date": "2026-10-02",
+  "featured": false,
+  "body": "Cloudflare sits in front of S3 and nothing is ever purged."
+}

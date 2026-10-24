@@ -2,12 +2,13 @@
 // from the content config on each read, and the admin is served from the package's build. No page
 // is listed in routes.json, so a save writes only the entry and Astro re-renders on its own.
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { memoryBackend, type Backend } from '../emulator/index.ts';
 import { state } from './mode.ts';
 import { compileSchema } from './schema.ts';
 
 const ROUTES = '_gratis/routes.json';
+const CONTENT = '_gratis/content/';
 const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n';
 const encode = (text: string) => new TextEncoder().encode(text);
 
@@ -17,9 +18,16 @@ const LOCAL_META = '<meta name="gratis-storage" content="local">';
 export function devBackend({ root, adminDist }: { root: URL; adminDist: URL }): Backend {
   const memory = memoryBackend({ [ROUTES]: json({ pages: {}, _pending: [] }) });
   const schema = () => compileSchema(state().collections);
+  // The repo file behind a content key: a single's file, or an entry's file in its collection's folder.
   const sourceOf = (key: string) => {
-    const collection = Object.values(schema().collections).find(({ storage }) => key === `_gratis/content/${storage.path}`);
-    return collection && new URL(collection.storage.source, root);
+    if (!key.startsWith(CONTENT)) return undefined;
+    const path = key.slice(CONTENT.length);
+    for (const { storage } of Object.values(schema().collections)) {
+      if (path === storage.path) return new URL(storage.source, root);
+      const id = path.startsWith(storage.path) && storage.path.endsWith('/') && path.slice(storage.path.length);
+      if (id && /^[^/]+\.json$/.test(id)) return new URL(storage.source + id, root);
+    }
+    return undefined;
   };
   const orNull = <T>(promise: Promise<T>) =>
     promise.catch((error: NodeJS.ErrnoException) => (error.code === 'ENOENT' || error.code === 'EISDIR' ? null : Promise.reject(error)));
@@ -40,13 +48,27 @@ export function devBackend({ root, adminDist }: { root: URL; adminDist: URL }): 
     async write(key, body) {
       if (key === ROUTES) return memory.write(key, body);
       const source = sourceOf(key);
-      if (source) return writeFile(source, body);
+      if (source) {
+        await mkdir(new URL('.', source), { recursive: true });
+        return writeFile(source, body);
+      }
       // Page writes: nothing to do, Astro renders the pages in dev.
     },
     async remove(key) {
       const source = sourceOf(key);
-      if (source) throw new Error(`deleting ${key} in dev isn't supported`);
+      if (source) return rm(source, { force: true });
       return memory.remove(key);
+    },
+    // Only collection folders are listed: the admin lists nothing else.
+    async list(prefix) {
+      const keys: string[] = [];
+      for (const { storage } of Object.values(schema().collections)) {
+        const folder = CONTENT + storage.path;
+        if (!storage.path.endsWith('/') || !(folder.startsWith(prefix) || prefix.startsWith(folder))) continue;
+        const names = (await orNull(readdir(new URL(storage.source, root)))) ?? [];
+        keys.push(...names.filter((name) => name.endsWith('.json')).map((name) => folder + name).filter((key) => key.startsWith(prefix)));
+      }
+      return keys.sort();
     },
   };
 }

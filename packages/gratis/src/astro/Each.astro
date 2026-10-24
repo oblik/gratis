@@ -1,10 +1,10 @@
 ---
-import { isTemplateMode, sentinel } from './mode.ts';
+import { markerOf, sentinel } from './mode.ts';
 
-// Lists arrive after the MVP. In template mode `of` is a sentinel and the slot renders one
-// placeholder item between the markers; in real mode it runs once per item.
+// In template mode `of` is a query and the slot renders one placeholder item between the markers;
+// in real mode it runs once per item.
 const { of } = Astro.props;
-const ref = isTemplateMode() && String(of).match(/^\{\{gratis:(.+)\}\}$/)?.[1];
+const ref = markerOf(of);
 const placeholder = new Proxy({}, { get: (_, key) => (typeof key === 'string' ? sentinel('item', key) : undefined) });
 const items = ref ? [placeholder] : (of ?? []);
 const rendered = await Promise.all(items.map((item) => Astro.slots.render('default', [item])));

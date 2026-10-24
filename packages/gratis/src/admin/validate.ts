@@ -10,6 +10,8 @@ export function validate({ fields }: Collection, draft: Record<string, unknown>)
     if (field.type === 'text') {
       if (value != null && typeof value !== 'string') errors[pathKey([key])] = 'Must be text.';
       else if (!field.multiline && typeof value === 'string' && value.includes('\n')) errors[pathKey([key])] = 'Must be a single line.';
+    } else if (field.type === 'boolean') {
+      if (value != null && typeof value !== 'boolean') errors[pathKey([key])] = 'Must be on or off.';
     }
   }
   return errors;

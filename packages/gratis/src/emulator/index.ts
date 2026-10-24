@@ -3,14 +3,16 @@
 // aren't checked. A connect-style handler, so it mounts as Vite middleware or on a plain server.
 
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { dirname, extname, resolve, sep } from 'node:path';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 
 export interface Backend {
   read(key: string): Promise<Uint8Array | null>;
   write(key: string, body: Uint8Array): Promise<void>;
   remove(key: string): Promise<void>;
+  /** Every key that starts with `prefix`, sorted. */
+  list(prefix: string): Promise<string[]>;
 }
 
 export const TYPES: Record<string, string> = {
@@ -33,6 +35,7 @@ export function memoryBackend(initial: Record<string, string | Uint8Array> = {})
     read: async (key) => objects.get(key) ?? null,
     write: async (key, body) => void objects.set(key, body),
     remove: async (key) => void objects.delete(key),
+    list: async (prefix) => [...objects.keys()].filter((key) => key.startsWith(prefix)).sort(),
   };
 }
 
@@ -51,8 +54,30 @@ export function folderBackend(dir: string): Backend {
       await writeFile(path(key), body);
     },
     remove: (key) => rm(path(key), { force: true }),
+    async list(prefix) {
+      // Walks only the folder the prefix is in.
+      const dir = resolve(root, prefix.slice(0, prefix.lastIndexOf('/') + 1));
+      if (dir !== root && !dir.startsWith(root + sep)) return [];
+      const keys: string[] = [];
+      for (const file of await readdir(dir, { recursive: true, withFileTypes: true }).catch(() => [])) {
+        if (!file.isFile()) continue;
+        const key = relative(root, join(file.parentPath, file.name)).split(sep).join('/');
+        if (key.startsWith(prefix)) keys.push(key);
+      }
+      return keys.sort();
+    },
   };
 }
+
+const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** ListObjectsV2's response, in one page: Gratis lists folders of a few dozen entries. */
+export const listResult = (prefix: string, keys: string[]) => new TextEncoder().encode(
+  '<?xml version="1.0" encoding="UTF-8"?>\n<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+  + `<Prefix>${xml(prefix)}</Prefix><KeyCount>${keys.length}</KeyCount><IsTruncated>false</IsTruncated>`
+  + keys.map((key) => `<Contents><Key>${xml(key)}</Key></Contents>`).join('')
+  + '</ListBucketResult>',
+);
 
 async function readBody(req: IncomingMessage) {
   const chunks: Buffer[] = [];
@@ -76,9 +101,14 @@ export interface EmulatorOptions {
 /** Without `next`, a missing object is a 404; with it, the request passes on, as in dev. */
 export function createEmulator(backend: Backend, { website = false }: EmulatorOptions = {}) {
   return async function handle(req: IncomingMessage, res: ServerResponse, next?: () => void) {
-    const { pathname } = new URL(req.url!, 'http://localhost');
+    const { pathname, searchParams } = new URL(req.url!, 'http://localhost');
     let key = decodeURIComponent(pathname).slice(1);
     try {
+      // ListObjectsV2 on the path-style endpoint, which is the origin's root.
+      if (req.method === 'GET' && key === '' && searchParams.get('list-type') === '2') {
+        const prefix = searchParams.get('prefix') ?? '';
+        return send(res, 200, { 'Content-Type': 'application/xml' }, listResult(prefix, await backend.list(prefix)));
+      }
       if (req.method === 'GET' || req.method === 'HEAD') {
         if (website && (key === '' || key.endsWith('/'))) key += 'index.html';
         let body = await backend.read(key);

@@ -2,12 +2,14 @@
 
 import { createHashHistory, createRootRoute, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
 import { hasSession, openSite } from './session.ts';
-import { readEntry } from './site.ts';
+import { entryKey, readEntry } from './site.ts';
 import { Status } from './ui/Status.tsx';
 import { Home } from './views/Home.tsx';
 import { Layout, SiteError } from './views/Layout.tsx';
 import { Login } from './views/Login.tsx';
 import { EntryError, Single } from './views/Single.tsx';
+import { Collection } from './views/Collection.tsx';
+import { CollectionEntry, NewEntry } from './views/CollectionEntry.tsx';
 
 function Root() {
   return (
@@ -56,8 +58,28 @@ const single = createRoute({
   component: Single,
 });
 
+const collection = createRoute({ getParentRoute: () => app, path: '/collections/$name' });
+
+const collectionIndex = createRoute({ getParentRoute: () => collection, path: '/', component: Collection });
+
+const newEntry = createRoute({
+  getParentRoute: () => collection,
+  path: '/new',
+  remountDeps: ({ params }) => params,
+  component: NewEntry,
+});
+
+const collectionEntry = createRoute({
+  getParentRoute: () => collection,
+  path: '/$id',
+  loader: ({ context: { site }, params: { name, id } }) => readEntry(site, entryKey(name, id)),
+  remountDeps: ({ params }) => params,
+  errorComponent: EntryError,
+  component: CollectionEntry,
+});
+
 export const router = createRouter({
-  routeTree: root.addChildren([login, app.addChildren([home, single])]),
+  routeTree: root.addChildren([login, app.addChildren([home, single, collection.addChildren([collectionIndex, newEntry, collectionEntry])])]),
   history: createHashHistory(),
 });
 

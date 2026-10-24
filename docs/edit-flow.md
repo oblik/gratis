@@ -3,7 +3,7 @@
 ## Saving
 
 1. Editor opens `/admin/`, logs in (see [Authentication](auth.md)).
-2. SPA fetches `schema.json`, `routes.json` and every content file (a few dozen tiny files at most), and renders the collection list and the forms. Templates are fetched when first needed.
+2. SPA fetches `schema.json` and `routes.json`, lists each per-entry collection's folder with `ListObjectsV2`, fetches every content file (a few dozen tiny files at most), and renders the collection list and the forms. Templates are fetched when first needed.
 3. Editor changes `title` on the post `hello` and saves.
 4. SPA works out the affected pages from `routes.json`: every page whose dependencies list the entry, in every locale, plus every page that queries the collection by a field that changed (see [Content model](content-model.md#dependencies)).
 5. SPA writes `routes.json` with a `_pending` list of the pages to render, using `If-Match` on its ETag.

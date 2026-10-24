@@ -7,12 +7,17 @@ export class ConflictError extends Error {}
 
 export interface Session { endpoint: string; region: string; accessKeyId: string; secretAccessKey: string }
 export interface StoredObject { text: string; etag: string }
-export interface PutOptions { type?: string; ifMatch?: string }
+export interface PutOptions { type?: string; ifMatch?: string; ifNoneMatch?: '*' }
 
 export interface Storage {
   get(key: string): Promise<StoredObject | null>;
   put(key: string, body: string, options?: PutOptions): Promise<string>;
+  delete(key: string): Promise<void>;
+  /** Every key that starts with `prefix`, through ListObjectsV2. */
+  list(prefix: string): Promise<string[]>;
 }
+
+const unescapeXml = (s: string) => s.replace(/&(lt|gt|quot|apos|amp);/g, (_, name: string) => ({ lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' })[name]!);
 
 export function createStorage({ endpoint, region, accessKeyId, secretAccessKey }: Session): Storage {
   const aws = new AwsClient({ accessKeyId, secretAccessKey, service: 's3', region });
@@ -26,15 +31,39 @@ export function createStorage({ endpoint, region, accessKeyId, secretAccessKey }
       return { text: await res.text(), etag: res.headers.get('etag')! };
     },
 
-    /** Writes with If-Match when given, so a stale ETag fails instead of overwriting. Returns the new ETag. */
-    async put(key, body, { type, ifMatch } = {}) {
+    /**
+     * Writes with If-Match when given, so a stale ETag fails instead of overwriting, or with
+     * If-None-Match: * so an existing object does. Returns the new ETag.
+     */
+    async put(key, body, { type, ifMatch, ifNoneMatch } = {}) {
       const headers: Record<string, string> = { 'Cache-Control': 'no-cache' };
       if (type) headers['Content-Type'] = type;
       if (ifMatch) headers['If-Match'] = ifMatch;
+      if (ifNoneMatch) headers['If-None-Match'] = ifNoneMatch;
       const res = await aws.fetch(url(key), { method: 'PUT', body, headers });
       if (res.status === 412) throw new ConflictError(`${key} changed since it was read`);
       if (!res.ok) throw new Error(`PUT ${key}: ${res.status}`);
       return res.headers.get('etag')!;
+    },
+
+    async delete(key) {
+      const res = await aws.fetch(url(key), { method: 'DELETE' });
+      if (!res.ok) throw new Error(`DELETE ${key}: ${res.status}`);
+    },
+
+    async list(prefix) {
+      const keys: string[] = [];
+      let token: string | undefined;
+      do {
+        const params = new URLSearchParams({ 'list-type': '2', prefix });
+        if (token) params.set('continuation-token', token);
+        const res = await aws.fetch(`${endpoint}/?${params}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`LIST ${prefix}: ${res.status}`);
+        const xml = await res.text();
+        for (const [, key] of xml.matchAll(/<Key>([^<]*)<\/Key>/g)) keys.push(unescapeXml(key));
+        token = /<IsTruncated>true<\/IsTruncated>/.test(xml) ? unescapeXml(xml.match(/<NextContinuationToken>([^<]*)</)![1]) : undefined;
+      } while (token);
+      return keys;
     },
   };
 }
@@ -60,5 +89,10 @@ export function createCache(storage: Storage): Cache {
       objects.set(key, { text: body, etag });
       return etag;
     },
+    async delete(key) {
+      await storage.delete(key);
+      objects.set(key, null);
+    },
+    list: (prefix) => storage.list(prefix),
   };
 }

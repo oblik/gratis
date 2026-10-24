@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { JSDOM } from 'jsdom';
 import { createEmulator, memoryBackend } from '../src/emulator/index.ts';
 import { createCache, createStorage, ConflictError } from '../src/admin/storage.ts';
-import { loadSite, readEntry, saveEntry } from '../src/admin/site.ts';
+import { loadSite, readEntry, saveEntry, createEntry, deleteEntry } from '../src/admin/site.ts';
 
 const { DOMParser } = new JSDOM('').window;
 const json = (value) => JSON.stringify(value, null, 2) + '\n';
@@ -76,4 +76,84 @@ test('reads act like the website endpoint', async () => {
   assert.equal(dir.status, 301);
   assert.equal(dir.headers.get('location'), '/about/');
   assert.equal((await fetch(`${endpoint}/missing`)).status, 404);
+});
+
+// A blog: a home page listing posts by date, and a page per post.
+const blog = () => memoryBackend({
+  '_gratis/schema.json': json({
+    collections: {
+      site: { single: true, storage: { path: 'site.json', source: 'src/data/site.json' }, fields: { title: { type: 'text', label: 'Title' } } },
+      posts: {
+        single: false,
+        storage: { path: 'posts/', source: 'src/data/posts/' },
+        fields: { title: { type: 'text', label: 'Title' }, date: { type: 'text', label: 'Date' }, featured: { type: 'boolean', label: 'Featured' } },
+      },
+    },
+    routes: { '/blog/[slug]': { collection: 'posts', param: 'slug', file: 'blog/[slug]/index.html' } },
+  }),
+  '_gratis/routes.json': json({
+    pages: {
+      '/': { template: '/', file: 'index.html', deps: { entries: ['posts/a', 'site'], collections: { posts: ['date'] } }, updated: '' },
+      '/blog/a': { template: '/blog/[slug]', file: 'blog/a/index.html', entry: 'posts/a', deps: { entries: ['posts/a', 'site'], collections: {} }, updated: '' },
+    },
+    _pending: [],
+  }),
+  '_gratis/templates/index.html': '<!DOCTYPE html><html><head></head><body><ul><!--gratis:each query:posts {"sort":"-date"}--><li><a href="/blog/{{gratis:item:id}}/">{{gratis:item:title}}</a></li><!--/gratis:each--></ul></body></html>',
+  '_gratis/templates/blog/[slug].html': '<!DOCTYPE html><html><head><title>{{gratis:route:title}} · {{gratis:entry:site:title}}</title></head><body><!--gratis:if route:featured--><p>Featured</p><!--/gratis:if--></body></html>',
+  '_gratis/content/site.json': json({ title: 'Blog' }),
+  '_gratis/content/posts/a.json': json({ title: 'A', date: '2026-01-01', featured: false }),
+  'index.html': 'old',
+  'blog/a/index.html': 'old',
+});
+
+test('ListObjectsV2 lists keys by prefix, and the site lists each collection from it', async () => {
+  backend = blog();
+  const res = await fetch(`${endpoint}/?list-type=2&prefix=_gratis/content/posts/`);
+  assert.match(await res.text(), /<Key>_gratis\/content\/posts\/a\.json<\/Key><\/Contents><\/ListBucketResult>$/);
+  const site = await open();
+  assert.deepEqual(site.entries, { posts: ['a'] });
+});
+
+test('creating an entry writes it, adds and renders its page and re-renders the pages that query it', async () => {
+  backend = blog();
+  const site = await open();
+  const pages = await createEntry(site, 'posts', 'b', { title: 'B', date: '2026-02-01', featured: true }, { DOMParser });
+  assert.deepEqual(pages.sort(), ['/', '/blog/b']);
+  assert.deepEqual(JSON.parse(text('_gratis/content/posts/b.json')).title, 'B');
+  assert.equal(text('blog/b/index.html'), '<!DOCTYPE html><html><head><title>B · Blog</title></head><body><p>Featured</p></body></html>');
+  assert.match(text('index.html'), /<ul><li><a href="\/blog\/b\/">B<\/a><\/li><li><a href="\/blog\/a\/">A<\/a><\/li><\/ul>/);
+  const routes = JSON.parse(text('_gratis/routes.json'));
+  assert.equal(routes.pages['/blog/b'].entry, 'posts/b');
+  assert.deepEqual(routes.pages['/'].deps.entries, ['posts/a', 'posts/b']);
+  assert.deepEqual(site.entries.posts, ['a', 'b']);
+  // An existing id fails instead of overwriting, and leaves no page behind.
+  await assert.rejects(createEntry(site, 'posts', 'a', { title: 'X', date: '', featured: false }, { DOMParser }), ConflictError);
+  assert.equal(JSON.parse(text('_gratis/content/posts/a.json')).title, 'A');
+  assert.equal(Object.keys(JSON.parse(text('_gratis/routes.json')).pages).length, 3);
+});
+
+test('a save re-renders a listing when it shows the entry or queries a field that changed', async () => {
+  backend = blog();
+  backend.objects.set('_gratis/templates/index.html', new TextEncoder().encode(text('_gratis/templates/index.html').replace('"-date"', '"-date","limit":1')));
+  const site = await open();
+  await createEntry(site, 'posts', 'b', { title: 'B', date: '2026-02-01', featured: false }, { DOMParser });
+  // The home page now shows only b, so a's featured flag matters to a's page alone...
+  assert.deepEqual(await saveEntry(site, 'posts/a', { title: 'A', date: '2026-01-01', featured: true }, { DOMParser }), ['/blog/a']);
+  // ...but its date can put it on the home page.
+  assert.deepEqual((await saveEntry(site, 'posts/a', { title: 'A', date: '2026-12-01', featured: true }, { DOMParser })).sort(), ['/', '/blog/a']);
+  assert.match(text('index.html'), /<ul><li><a href="\/blog\/a\/">A<\/a><\/li><\/ul>/);
+});
+
+test('deleting an entry deletes its file and page and re-renders the pages that listed it', async () => {
+  backend = blog();
+  const site = await open();
+  await createEntry(site, 'posts', 'b', { title: 'B', date: '2026-02-01', featured: false }, { DOMParser });
+  assert.deepEqual(await deleteEntry(site, 'posts/a', { DOMParser }), ['/']);
+  assert.equal(backend.objects.has('_gratis/content/posts/a.json'), false);
+  assert.equal(backend.objects.has('blog/a/index.html'), false);
+  assert.match(text('index.html'), /<ul><li><a href="\/blog\/b\/">B<\/a><\/li><\/ul>/);
+  const routes = JSON.parse(text('_gratis/routes.json'));
+  assert.deepEqual(Object.keys(routes.pages).sort(), ['/', '/blog/b']);
+  assert.deepEqual(site.entries.posts, ['b']);
+  assert.deepEqual((await open()).entries.posts, ['b']);
 });

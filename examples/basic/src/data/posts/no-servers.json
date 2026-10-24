@@ -1,0 +1,6 @@
+{
+  "title": "Why no servers",
+  "date": "2026-09-14",
+  "featured": false,
+  "body": "No application server, functions, database or identity provider. The only runtime is the browser."
+}

@@ -5,11 +5,11 @@
 //
 // Credentials and region come from the standard AWS environment (AWS_PROFILE or keys, AWS_REGION).
 
-import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join, relative, dirname } from 'node:path';
 import { createServer } from 'node:http';
 import { parseArgs } from 'node:util';
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { createEmulator, folderBackend, contentType, type Backend } from '../emulator/index.ts';
 import { encryptCredentials } from '../admin/auth.ts';
 import type { Schema } from '../admin/site.ts';
@@ -42,15 +42,39 @@ async function get(key: string) {
   }
 }
 
+async function list(prefix: string) {
+  const keys: string[] = [];
+  let token: string | undefined;
+  do {
+    const res = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }));
+    keys.push(...(res.Contents ?? []).map(({ Key }) => Key!));
+    token = res.NextContinuationToken;
+  } while (token);
+  return keys;
+}
+
+// A collection's folder is mirrored: entries deleted in the bucket are deleted in the repo too, or
+// the next deploy would seed them again.
 async function pull() {
   const schema = await get('_gratis/schema.json');
   if (!schema) return console.log('nothing to pull: the bucket has no schema.json yet');
-  for (const [name, { storage }] of Object.entries((JSON.parse(schema) as Schema).collections)) {
-    const text = await get(`_gratis/content/${storage.path}`);
-    if (text == null) continue;
-    await mkdir(dirname(join(root, storage.source)), { recursive: true });
-    await writeFile(join(root, storage.source), text);
-    console.log(`pulled ${name} -> ${storage.source}`);
+  for (const [name, { single, storage }] of Object.entries((JSON.parse(schema) as Schema).collections)) {
+    if (single) {
+      const text = await get(`_gratis/content/${storage.path}`);
+      if (text == null) continue;
+      await mkdir(dirname(join(root, storage.source)), { recursive: true });
+      await writeFile(join(root, storage.source), text);
+      console.log(`pulled ${name} -> ${storage.source}`);
+      continue;
+    }
+    const folder = `_gratis/content/${storage.path}`;
+    const names = (await list(folder)).map((key) => key.slice(folder.length)).filter((file) => /^[^/]+\.json$/.test(file));
+    await mkdir(join(root, storage.source), { recursive: true });
+    for (const file of names) await writeFile(join(root, storage.source, file), (await get(folder + file))!);
+    for (const file of await readdir(join(root, storage.source))) {
+      if (file.endsWith('.json') && !names.includes(file)) await rm(join(root, storage.source, file));
+    }
+    console.log(`pulled ${name} (${names.length} entries) -> ${storage.source}`);
   }
 }
 

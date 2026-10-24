@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "example-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "example-basic", "preview", "--port", "4322"],
+      "port": 4322
+    },
+    {
+      "name": "example-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "example-basic", "dev", "--port", "4323"],
+      "port": 4323
+    }
+  ]
+}

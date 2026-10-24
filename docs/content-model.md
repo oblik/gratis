@@ -60,7 +60,7 @@ Entry ids are what the loader gives them: the path without extension for `glob`,
 }
 ```
 
-The index is the only file that knows which pages exist. `file` is the object key the page is written to, taken from the build so the admin follows Astro's `build.format`. The sitemap, the admin's page list and "re-render everything" read it and nothing else, so no bucket listing is ever needed. The build writes it from the collections and the route patterns; the admin updates it as entries are created and deleted. It carries the i18n settings and per-page locales once the site has more than one locale (see [Localization](localization.md#routing)), and the `_pending` list used for recovery (see [Edit flow](edit-flow.md#consistency-and-recovery)). Nothing from the entry files is duplicated into it.
+The index is the only file that knows which pages exist. `file` is the object key the page is written to, taken from the build so the admin follows Astro's `build.format`. The sitemap, the admin's page list and "re-render everything" read it and nothing else, so pages are never found by listing the bucket. Entries are: the admin lists a per-entry collection's folder with `ListObjectsV2`, so a collection has no index of its own. The build writes it from the collections and the route patterns; the admin updates it as entries are created and deleted. It carries the i18n settings and per-page locales once the site has more than one locale (see [Localization](localization.md#routing)), and the `_pending` list used for recovery (see [Edit flow](edit-flow.md#consistency-and-recovery)). Nothing from the entry files is duplicated into it.
 
 ## Dependencies
 
