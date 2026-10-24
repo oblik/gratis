@@ -9,7 +9,8 @@ Done: one `site` single with one text field, deployed to S3 behind Cloudflare at
 ```
 packages/gratis/      `gratis` (integration), `gratis/astro` (defineCollection, file, text, getEntry, Each, If), `gratis/renderer`
   src/astro/cli.js    `gratis deploy` and `gratis pull`
-  src/admin/          the SPA (plain DOM, built with Vite into dist/admin); site.js holds the save flow, DOM-free
+  src/admin/          the SPA, per architecture.md#admin-spa; site.ts (save flow), storage.ts (S3 client and object cache) and auth.ts are framework-free
+  src/renderer/       render(), TypeScript that Node runs through type stripping
 examples/basic/       the demo site
 scripts/              setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit: the prototype of `gratis init`
 ```
@@ -24,12 +25,16 @@ Every script targets `GRATIS_SITE` (default `demo.gratis.build`) and reads crede
 - Cloudflare serves HTML as `DYNAMIC` with `Cache-Control: no-cache`; no purge is needed. Flexible SSL is a Configuration Rule scoped to the one hostname, leaving the zone's mode alone.
 - Astro 7: a collection not made by Astro's `defineCollection` must carry `type: 'content_layer'`. A programmatic `build()` nested in `astro:build:done` works for the template pass; give it its own `cacheDir` so it doesn't share the content store with the real build. The hook's `assets` map (route pattern to output files) is what names the templates and gives `routes.json` each page's `file`.
 - `astro.config` loads `gratis` in plain Node, so the integration entry must not import `.astro` files or `astro:content`; those live in `gratis/astro`, which only Vite loads. The getters import `astro:content` lazily.
+- `@vitejs/plugin-react` 6 runs on Oxc and no longer takes Babel plugins; the React Compiler goes through `@rolldown/plugin-babel` with its `reactCompilerPreset`.
+- The integration, the CLI and the scripts import the TypeScript core directly. Node strips the types, so the core needs only erasable syntax and `.ts` import specifiers.
 - The build already renders every page with the Node renderer and warns when the result differs from the real build: the start of the [build-time content check](#build-time-content-check).
 
 ### Left open
 
 - `deploy` doesn't yet re-render pages whose dependencies changed in the bucket during the build.
 - The renderer rejects `each` and `if` markers; `Each` and `If` emit them, but nothing consumes them yet. No dynamic routes, no async-context middleware (singles don't need it), no validation of reads against the schema.
+- Node refuses to strip types under `node_modules`, so the published package will need the core compiled to JS (or the integration bundled); in the workspace the symlink's real path sits outside `node_modules`.
+- Lexical isn't installed yet: no field is rich text. The admin has no locales, tabs or lists, so no search params yet either.
 - `deploy` assumes `outDir` is `dist`. `npx astro add gratis` is untested.
 
 ## Next, in order

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { render } from '../src/renderer/index.js';
+import { render } from '../src/renderer/index.ts';
 
 const { DOMParser } = new JSDOM('').window;
 const template = '<!DOCTYPE html><html><head><meta property="og:title" content="{{gratis:entry:site:title}}"><title>{{gratis:entry:site:title}} · Home</title></head><body><h1>{{gratis:entry:site:title}}</h1></body></html>';

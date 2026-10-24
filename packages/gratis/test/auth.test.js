@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encryptCredentials, decryptCredentials } from '../src/admin/auth.js';
+import { encryptCredentials, decryptCredentials } from '../src/admin/auth.ts';
 
 const keys = { accessKeyId: 'AKIDEXAMPLE', secretAccessKey: 'secret/example+key' };
 const storage = { endpoint: 'https://s3.eu-central-1.amazonaws.com/example.com', region: 'eu-central-1' };

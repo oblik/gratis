@@ -4,13 +4,17 @@
 // DOMParser is the browser's own or jsdom's (see docs/rendering.md#output-equivalence).
 // `content` maps an entry key (`site` for a single, `posts/hello` for an entry) to its fields.
 
+export type Content = Record<string, Record<string, unknown>>;
+export interface Deps { entries: string[]; collections: Record<string, unknown> }
+export interface Dom { DOMParser: new () => DOMParser }
+
 const SENTINEL = /\{\{gratis:([^}]+)\}\}/g;
 
-export function render(template, { content }, { DOMParser }) {
+export function render(template: string, { content }: { content: Content }, { DOMParser }: Dom): { html: string; deps: Deps } {
   const doc = new DOMParser().parseFromString(template, 'text/html');
-  const entries = new Set();
+  const entries = new Set<string>();
 
-  const resolve = (ref) => {
+  const resolve = (ref: string) => {
     const [scope, ...rest] = ref.split(':');
     if (scope !== 'entry') throw new Error(`gratis: unsupported sentinel scope "${scope}" in {{gratis:${ref}}}`);
     const [key, field] = rest;
@@ -18,18 +22,19 @@ export function render(template, { content }, { DOMParser }) {
     const value = content[key]?.[field];
     return value == null ? '' : String(value);
   };
-  const fill = (s) => s.replace(SENTINEL, (_, ref) => resolve(ref));
+  const fill = (s: string) => s.replace(SENTINEL, (_, ref: string) => resolve(ref));
 
   const walker = doc.createTreeWalker(doc.documentElement, 0x1 | 0x4 | 0x80); // elements, text, comments
-  for (let node = walker.currentNode; node; node = walker.nextNode()) {
+  for (let node: Node | null = walker.currentNode; node; node = walker.nextNode()) {
     if (node.nodeType === 1) {
-      for (const attr of node.attributes) if (attr.value.includes('{{gratis:')) attr.value = fill(attr.value);
+      for (const attr of (node as Element).attributes) if (attr.value.includes('{{gratis:')) attr.value = fill(attr.value);
     } else if (node.nodeType === 3) {
-      const parent = node.parentNode.nodeName;
+      const text = node as Text;
+      const parent = text.parentNode!.nodeName;
       if (parent === 'SCRIPT' || parent === 'STYLE') continue;
-      if (node.data.includes('{{gratis:')) node.data = fill(node.data);
-    } else if (/^\/?gratis:/.test(node.data)) {
-      throw new Error(`gratis: <!--${node.data}--> markers are not supported yet`);
+      if (text.data.includes('{{gratis:')) text.data = fill(text.data);
+    } else if (/^\/?gratis:/.test((node as Comment).data)) {
+      throw new Error(`gratis: <!--${(node as Comment).data}--> markers are not supported yet`);
     }
   }
 

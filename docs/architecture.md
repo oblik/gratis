@@ -49,7 +49,7 @@ React and TypeScript, built with Vite into `dist/admin` and styled with Tailwind
 - `@tanstack/react-router`, for routing
 - `zustand`, for form state
 
-The build adds the React Compiler as a Babel plugin of `@vitejs/plugin-react`, so components are memoized without hand-written `memo` or `useCallback`.
+The build runs the React Compiler through Babel, with `@rolldown/plugin-babel` and the `reactCompilerPreset` of `@vitejs/plugin-react`, so components are memoized without hand-written `memo` or `useCallback`.
 
 Everything else is local code:
 

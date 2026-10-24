@@ -5,7 +5,7 @@
   "exports": {
     ".": "./src/astro/integration.js",
     "./astro": "./src/astro/index.js",
-    "./renderer": "./src/renderer/index.js"
+    "./renderer": "./src/renderer/index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1154.0",
@@ -16,12 +16,27 @@
     "astro": "^7.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.9",
+    "@rolldown/plugin-babel": "^0.2.4",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-router": "^1.170.46",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "astro": "^7.4.1",
-    "vite": "^8.3.5"
+    "babel-plugin-react-compiler": "^1.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "zustand": "^5.0.16"
   },
   "scripts": {
     "test": "node --test",
-    "build": "vite build --config vite.admin.config.js"
+    "typecheck": "tsc",
+    "build": "tsc && vite build --config vite.admin.config.js"
   },
   "files": [
     "src",

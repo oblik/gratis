@@ -6,7 +6,7 @@
 import { appendFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { encryptCredentials } from '../packages/gratis/src/admin/auth.js';
+import { encryptCredentials } from '../packages/gratis/src/admin/auth.ts';
 import { bucket, region, s3Endpoint } from './config.js';
 
 const username = process.argv[2];

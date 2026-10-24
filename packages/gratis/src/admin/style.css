@@ -1,12 +1,4 @@
-:root { color-scheme: light dark; font: 16px/1.5 system-ui, sans-serif; }
-body { margin: 0; }
-main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
-header { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-header h1 { margin-right: auto; }
-form { display: grid; gap: 0.75rem; margin-block: 1rem; }
-fieldset { display: grid; gap: 0.75rem; border: 1px solid #8884; border-radius: 6px; padding: 1rem; }
-label { display: grid; gap: 0.25rem; font-weight: 500; }
-input, textarea { font: inherit; padding: 0.4rem 0.5rem; }
-button { font: inherit; padding: 0.4rem 0.9rem; cursor: pointer; justify-self: start; }
-#status { min-height: 1.5em; color: #888; }
-#status.error { color: #c33; }
+@import "tailwindcss";
+
+:root { color-scheme: light dark; }
+body { @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100; }

@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, relative } from 'node:path';
 import { JSDOM } from 'jsdom';
 import { isTemplateMode, state } from './mode.js';
-import { render } from '../renderer/index.js';
-import { templateId, templateFile } from '../renderer/paths.js';
+import { render } from '../renderer/index.ts';
+import { templateId, templateFile } from '../renderer/paths.ts';
 
 const adminDist = new URL('../../dist/admin/', import.meta.url);
 const readable = (key) => key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
