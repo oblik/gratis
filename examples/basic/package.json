@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "gratis preview"
   },
   "dependencies": {
-    "astro": "^7.4.1",
+    "astro": "^7.4.2",
     "gratis": "workspace:*"
   }
 }

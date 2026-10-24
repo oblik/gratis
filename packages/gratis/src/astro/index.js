@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { z } from 'astro/zod';
 import { isTemplateMode, state, sentinel } from './mode.js';
 export { default as Each } from './Each.astro';
@@ -27,13 +28,20 @@ export function defineCollection({ single = false, loader, schema: fields }) {
     schema,
     loader: {
       name: 'gratis',
-      async load({ collection, store, parseData, config }) {
+      async load({ collection, store, parseData, config, watcher }) {
         state().collections[collection] = { single, fields, storage: { file: loader.path } };
-        store.clear();
-        const data = isTemplateMode()
-          ? Object.fromEntries(Object.keys(fields).map((k) => [k, sentinel('entry', collection, k)]))
-          : JSON.parse(await readFile(new URL(loader.path, config.root), 'utf8'));
-        store.set({ id: collection, data: await parseData({ id: collection, data }) });
+        const path = fileURLToPath(new URL(loader.path, config.root));
+        const sync = async () => {
+          const data = isTemplateMode()
+            ? Object.fromEntries(Object.keys(fields).map((k) => [k, sentinel('entry', collection, k)]))
+            : JSON.parse(await readFile(path, 'utf8'));
+          store.clear();
+          store.set({ id: collection, data: await parseData({ id: collection, data }) });
+        };
+        await sync();
+        // In dev, an admin save (or a hand edit) rewrites the file; reload it like Astro's file() does.
+        watcher?.add(path);
+        watcher?.on('change', (changed) => changed === path && sync());
       },
     },
   };

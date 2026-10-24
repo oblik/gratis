@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getRouteApi, Link, Outlet, type ErrorComponentProps } from '@tanstack/react-router';
 import { renderPending } from '../site.ts';
-import { logOut } from '../session.ts';
+import { isLocal, logOut } from '../session.ts';
 import { Button } from '../ui/Button.tsx';
 import { ExternalIcon } from '../ui/icons.tsx';
 import { Status, type StatusMessage } from '../ui/Status.tsx';
@@ -37,8 +37,10 @@ export function Layout() {
       <header className="flex flex-wrap items-center gap-3 border-b border-gray-200 pb-3 dark:border-gray-700">
         <Link to="/" className="mr-auto text-xl font-semibold">Gratis</Link>
         <a href="/" target="_blank" className="inline-flex items-center gap-1 hover:underline">View site <ExternalIcon /></a>
-        <Button onClick={rerender} disabled={busy}>Re-render everything</Button>
-        <Button onClick={logOutAndReload}>Log out</Button>
+        {!isLocal() && <Button onClick={rerender} disabled={busy}>Re-render everything</Button>}
+        {isLocal()
+          ? <span className="rounded-md bg-amber-100 px-2 py-1 text-sm text-amber-900 dark:bg-amber-900 dark:text-amber-100" title="Saves write the content files in this project">Local</span>
+          : <Button onClick={logOutAndReload}>Log out</Button>}
       </header>
       <Status message={message} />
       <Outlet />

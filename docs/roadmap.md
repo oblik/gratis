@@ -8,14 +8,18 @@ Done: one `site` single with one text field, deployed to S3 behind Cloudflare at
 
 ```
 packages/gratis/      `gratis` (integration), `gratis/astro` (defineCollection, file, text, getEntry, Each, If), `gratis/renderer`
-  src/astro/cli.js    `gratis deploy` and `gratis pull`
+  src/astro/cli.js    `gratis deploy`, `gratis pull` and `gratis preview`
+  src/astro/dev.js    the emulator's backend in `astro dev`: the loaders' files and the admin build
+  src/emulator/       the storage emulator, with folder and in-memory backends
   src/admin/          the SPA, per architecture.md#admin-spa; site.ts (save flow), storage.ts (S3 client and object cache) and auth.ts are framework-free
   src/renderer/       render(), TypeScript that Node runs through type stripping
 examples/basic/       the demo site
 scripts/              setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit: the prototype of `gratis init`
 ```
 
-Every script targets `GRATIS_SITE` (default `demo.gratis.build`) and reads credentials from the gitignored `.env`. `scripts/e2e-edit.js <origin>` runs the SPA's own save code from Node against a live site, including a stale-ETag conflict; it is the quickest check that a deployed site still edits.
+Every script targets `GRATIS_SITE` (default `demo.gratis.build`) and reads credentials from the gitignored `.env`. `scripts/e2e-edit.js <origin>` runs the SPA's own save code from Node against a live site, including a stale-ETag conflict; it is the quickest check that a deployed site still edits. The same flow runs against the in-memory emulator in `pnpm test`.
+
+Locally, `pnpm --filter example-basic dev` serves the admin at `/admin/` with no login, writing `src/data/`; after a `pnpm --filter example-basic build`, `pnpm --filter example-basic preview` serves `dist/` as the bucket, logged in as `admin` / `gratis-preview`.
 
 ### Findings
 
@@ -27,6 +31,8 @@ Every script targets `GRATIS_SITE` (default `demo.gratis.build`) and reads crede
 - `astro.config` loads `gratis` in plain Node, so the integration entry must not import `.astro` files or `astro:content`; those live in `gratis/astro`, which only Vite loads. The getters import `astro:content` lazily.
 - `@vitejs/plugin-react` 6 runs on Oxc and no longer takes Babel plugins; the React Compiler goes through `@rolldown/plugin-babel` with its `reactCompilerPreset`.
 - The integration, the CLI and the scripts import the TypeScript core directly. Node strips the types, so the core needs only erasable syntax and `.ts` import specifiers.
+- `astro preview` can't be extended: it drops the project's Vite plugins and gives integrations no hook, hence `gratis preview`.
+- Astro's dev server sometimes serves the old content for a few seconds after a content file changes, with its own `file()` loader too. On 7.4.1 the first change after startup could stay stale until the next one; 7.4.2 only lags.
 - The build already renders every page with the Node renderer and warns when the result differs from the real build: the start of the [build-time content check](#build-time-content-check).
 
 ### Left open
@@ -34,6 +40,7 @@ Every script targets `GRATIS_SITE` (default `demo.gratis.build`) and reads crede
 - `deploy` doesn't yet re-render pages whose dependencies changed in the bucket during the build.
 - The renderer rejects `each` and `if` markers; `Each` and `If` emit them, but nothing consumes them yet. No dynamic routes, no async-context middleware (singles don't need it), no validation of reads against the schema.
 - Node refuses to strip types under `node_modules`, so the published package will need the core compiled to JS (or the integration bundled); in the workspace the symlink's real path sits outside `node_modules`.
+- The emulator has no `ListObjectsV2` yet; nothing uploads.
 - Lexical isn't installed yet: no field is rich text. The admin has no locales, tabs or lists, so no search params yet either.
 - `deploy` assumes `outDir` is `dist`. `npx astro add gratis` is untested.
 

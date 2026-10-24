@@ -5,28 +5,16 @@ import { JSDOM } from 'jsdom';
 import { isTemplateMode, state } from './mode.js';
 import { render } from '../renderer/index.ts';
 import { templateId, templateFile } from '../renderer/paths.ts';
+import { compileSchema } from './schema.js';
+import { devBackend } from './dev.js';
+import { createEmulator } from '../emulator/index.ts';
 
 const adminDist = new URL('../../dist/admin/', import.meta.url);
-const readable = (key) => key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 const json = (value) => JSON.stringify(value, null, 2) + '\n';
 
 async function write(url, text) {
   await mkdir(dirname(fileURLToPath(url)), { recursive: true });
   await writeFile(url, text);
-}
-
-// schema.json: what the admin renders its forms from and where each collection is stored.
-function compileSchema(collections) {
-  return {
-    collections: Object.fromEntries(Object.entries(collections).map(([name, { single, fields, storage }]) => [name, {
-      single,
-      storage: { path: `${name}.json`, source: storage.file },
-      fields: Object.fromEntries(Object.entries(fields).map(([key, { label, ...field }]) => [
-        key,
-        JSON.parse(JSON.stringify({ ...field, label: label ?? readable(key) })),
-      ])),
-    }])),
-  };
 }
 
 export default function gratis() {
@@ -38,6 +26,16 @@ export default function gratis() {
         root = config.root;
         // The getters import astro:content lazily, so Vite has to process the package.
         updateConfig({ vite: { ssr: { noExternal: ['gratis'] } } });
+      },
+      // The admin at /admin/ and the storage emulator over the content files, on the dev server's origin.
+      'astro:server:setup': async ({ server, logger }) => {
+        await access(adminDist).catch(() => logger.warn('the admin SPA is not built; run `pnpm build` in packages/gratis'));
+        const handle = createEmulator(devBackend({ root, adminDist }), { website: true });
+        server.middlewares.use((req, res, next) => {
+          const path = req.url.split('?')[0];
+          if (path.startsWith('/_gratis/') || path === '/admin' || path.startsWith('/admin/')) return handle(req, res, next);
+          next();
+        });
       },
       'astro:build:done': async ({ dir, assets, logger }) => {
         if (isTemplateMode()) {

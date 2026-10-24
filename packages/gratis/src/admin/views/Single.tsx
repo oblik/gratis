@@ -48,7 +48,7 @@ function EntryForm({ site, name, store }: { site: Site; name: string; store: Ent
       setMessage({ text: 'Saving…' });
       const pages = await saveEntry(site, name, fields, { DOMParser, etag: state.etag }, (path) => setMessage({ text: `Rendered ${path}` }));
       state.commit(fields, (await readEntry(site, name)).etag);
-      setMessage({ text: `Saved. ${pages.length} page(s) updated.` });
+      setMessage({ text: pages.length ? `Saved. ${pages.length} page(s) updated.` : 'Saved.' });
     } catch (error) {
       if (error instanceof ConflictError) {
         setConflict(true);

@@ -2,7 +2,7 @@
 
 A CMS for tiny static sites with no servers: the site, the admin SPA and all content live in one S3 bucket behind Cloudflare. The editor's browser re-renders affected pages from DOM-marked templates and writes them back to the bucket. The only runtime is the browser (plus the same renderer in Node at deploy time). No application server, functions, database or identity provider, ever.
 
-The docs are the design; the MVP is implemented (see [roadmap.md](docs/roadmap.md#mvp) for what exists, findings and gaps). Astro is the first SSG target. A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`; setup scripts in `scripts/` read credentials from the gitignored `.env`.
+The docs are the design; the MVP is implemented (see [roadmap.md](docs/roadmap.md#mvp) for what exists, findings and gaps). Astro is the first SSG target. A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`; setup scripts in `scripts/` read credentials from the gitignored `.env`. To try the admin without a bucket: `pnpm --filter example-basic dev` (no login, writes `src/data/`), or build it and `pnpm --filter example-basic preview` (`dist/` as the bucket, `admin` / `gratis-preview`).
 
 ## Docs
 

@@ -16,14 +16,23 @@ export interface Opened {
 
 let opened: Promise<Opened> | null = null;
 
-export const hasSession = () => sessionStorage.getItem(SESSION_KEY) != null;
+/** In `astro dev` the page says storage is the local emulator on this origin, which needs no login. */
+export const isLocal = () => document.querySelector('meta[name="gratis-storage"][content="local"]') != null;
+
+function session(): Session | null {
+  if (isLocal()) return { endpoint: location.origin, region: 'local', accessKeyId: 'local', secretAccessKey: 'local' };
+  const saved = sessionStorage.getItem(SESSION_KEY);
+  return saved ? JSON.parse(saved) : null;
+}
+
+export const hasSession = () => session() != null;
 
 /** Loads the site once per session, finishing any interrupted save. Null when logged out. */
 export function openSite(): Promise<Opened> | null {
-  const saved = sessionStorage.getItem(SESSION_KEY);
-  if (!saved) return null;
+  const current = session();
+  if (!current) return null;
   opened ??= (async () => {
-    const site = await loadSite(createCache(createStorage(JSON.parse(saved) as Session)));
+    const site = await loadSite(createCache(createStorage(current)));
     return { site, finished: await renderPending(site, { DOMParser }) };
   })();
   opened.catch(() => (opened = null));

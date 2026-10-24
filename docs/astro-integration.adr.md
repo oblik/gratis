@@ -11,3 +11,7 @@ Rejected as well: helpers that emit placeholders and a renderer that fills them 
 # An HTTP storage emulator, not a JavaScript storage interface
 
 The SPA already speaks the S3 REST API over `fetch`. Emulating that subset over HTTP means the SPA has exactly one code path, and only the endpoint and the auth differ between a laptop and production. A storage interface with two implementations would leave the production path untested locally. The same emulator runs in memory for tests, so no test ever needs a bucket.
+
+# `gratis preview`, not `astro preview`
+
+`astro preview` builds its own Vite preview server and drops the plugins from the project's Vite config, and integrations have no hook into it, so nothing can mount the emulator there. A command of Gratis's own serves `dist/` with a plain Node server instead. It is also closer to production: the emulator answers like the bucket's website endpoint, not like a dev server.

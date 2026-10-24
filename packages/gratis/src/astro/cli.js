@@ -1,32 +1,29 @@
 #!/usr/bin/env node
 // gratis deploy --bucket <name>   pull content, build, upload dist/
 // gratis pull --bucket <name>     copy the bucket's content files into the repo
+// gratis preview [--port 4321]    serve dist/ with the storage emulator, as if it were the bucket
 //
 // Credentials and region come from the standard AWS environment (AWS_PROFILE or keys, AWS_REGION).
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
-import { join, relative, extname, dirname } from 'node:path';
+import { join, relative, dirname } from 'node:path';
+import { createServer } from 'node:http';
 import { parseArgs } from 'node:util';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createEmulator, folderBackend, contentType } from '../emulator/index.ts';
+import { encryptCredentials } from '../admin/auth.ts';
 
 const { positionals: [command], values: args } = parseArgs({
   allowPositionals: true,
-  options: { bucket: { type: 'string' }, root: { type: 'string', default: process.cwd() } },
+  options: { bucket: { type: 'string' }, root: { type: 'string', default: process.cwd() }, port: { type: 'string', default: '4321' } },
 });
-if (!['deploy', 'pull'].includes(command) || !args.bucket) {
-  console.error('usage: gratis <deploy|pull> --bucket <name> [--root <dir>]');
+if (!(['deploy', 'pull'].includes(command) && args.bucket) && command !== 'preview') {
+  console.error('usage: gratis <deploy|pull> --bucket <name> [--root <dir>]\n       gratis preview [--root <dir>] [--port <port>]');
   process.exit(1);
 }
 
 const s3 = new S3Client({});
 const { bucket, root } = args;
-
-const TYPES = {
-  '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif', '.gif': 'image/gif', '.ico': 'image/x-icon',
-  '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json',
-};
 
 // Never overwritten by a deploy: editors own these once the site is live.
 const EDITOR_OWNED = ['_gratis/content/', '_gratis/auth/', 'uploads/'];
@@ -74,7 +71,7 @@ async function upload(dist) {
         Bucket: bucket,
         Key: key,
         Body: await readFile(path),
-        ContentType: TYPES[extname(key)] ?? 'application/octet-stream',
+        ContentType: contentType(key),
         CacheControl: IMMUTABLE.some((prefix) => key.startsWith(prefix)) ? 'public, max-age=31536000, immutable' : 'no-cache',
         // Content files are seeded on the first deploy and never replaced after.
         IfNoneMatch: editorOwned ? '*' : undefined,
@@ -88,7 +85,26 @@ async function upload(dist) {
   console.log(`uploaded ${uploaded} file(s) to ${bucket}`);
 }
 
-if (command === 'pull') {
+// The built site as the bucket, on localhost (a secure context, so the admin's WebCrypto works).
+// Saves write into dist/, so a rebuild starts over from the repo's content.
+async function preview(dist) {
+  const port = Number(args.port);
+  const origin = `http://localhost:${port}`;
+  const password = process.env.GRATIS_PREVIEW_PASSWORD ?? 'gratis-preview';
+  // A login like the real one, for keys the emulator doesn't check.
+  const blob = JSON.stringify(await encryptCredentials({ accessKeyId: 'local', secretAccessKey: 'local' }, password, { endpoint: origin, region: 'local' }));
+  const files = folderBackend(dist);
+  const backend = { ...files, read: (key) => (key === '_gratis/auth/admin.json' ? new TextEncoder().encode(blob) : files.read(key)) };
+  const handle = createEmulator(backend, { website: true });
+  createServer((req, res) => handle(req, res)).listen(port, 'localhost', () => {
+    console.log(`serving ${relative(process.cwd(), dist) || '.'} at ${origin}/`);
+    console.log(`admin: ${origin}/admin/, log in as admin / ${password}`);
+  });
+}
+
+if (command === 'preview') {
+  await preview(join(root, 'dist'));
+} else if (command === 'pull') {
   await pull();
 } else {
   await pull();
