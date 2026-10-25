@@ -1,4 +1,4 @@
-// The storage emulator (docs/astro-integration.md#preview-and-tests): the S3 subset the admin uses,
+// The storage emulator (notes/astro.md): the S3 subset the admin uses,
 // over HTTP, so the admin runs its one code path locally and only the endpoint differs. Signatures
 // aren't checked. A connect-style handler, so it mounts as Vite middleware or on a plain server.
 

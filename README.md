@@ -35,9 +35,13 @@ Explicit non-goals:
 
 - Drafts, scheduling, complex content review workflows
 - Large sites (hundreds of pages) or high-frequency editing by many people
-- "Top-notch" security. Gratis accepts a modest security compromise in exchange for having no moving parts. See [Authentication](auth.md).
+- "Top-notch" security. Gratis accepts a modest security compromise in exchange for having no moving parts. See [auth](notes/auth.md).
 
 The day a site needs any of the above, the honest answer is "use a real CMS", and Gratis should make that easy rather than tempting you to bolt features on.
+
+## What it can't do
+
+Nothing is generated per request, so anything that varies by visitor has to happen in their browser. Search with filters, for instance, means downloading an index of the entries once and filtering it client-side; S3 can only hand back the static files the editor produced. For the same reason there are no short-lived login tokens: whatever lets an editor in is static and can only be rotated after the fact (see [auth](notes/auth.md)).
 
 ## Why use it
 
@@ -55,8 +59,8 @@ Gratis's bet is different: depend only on things that already have, or can reaso
 - The browser, which is the most backwards-compatible runtime that exists.
 - Plain HTML, CSS, JS and JSON files.
 
-A Gratis site has no scheduled maintenance. If nobody touches it for ten years, it keeps serving and it keeps being editable. The only code that can break is Gratis's own renderer, and that risk is bounded by design (see [Consistency and recovery](edit-flow.md#consistency-and-recovery)).
+A Gratis site has no scheduled maintenance. If nobody touches it for ten years, it keeps serving and it keeps being editable. The only code that can break is Gratis's own renderer, and that risk is bounded by design (see [editing](notes/editing.md)).
 
 ---
 
-See [CLAUDE.md](CLAUDE.md) for the docs overview.
+See [CLAUDE.md](CLAUDE.md) for the notes and where things are in the code.

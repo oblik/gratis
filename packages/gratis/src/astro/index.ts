@@ -1,6 +1,9 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
+// Imported statically on purpose: in `astro dev` the module runner must re-fetch astro:content
+// while re-evaluating the page, ahead of Astro's CSS crawler re-transforming it, or it keeps its
+// old data store and a save doesn't show until a later one wins the race.
 import {
   getCollection as astroGetCollection,
   getEntry as astroGetEntry,
@@ -164,7 +167,7 @@ export async function getEntry<C extends CollectionKey>(
 }
 
 // The entries of a collection that match `query`, which is all the filtering a page may do: the
-// admin re-runs it when it renders the page (see docs/rendering.md#helpers).
+// admin re-runs it when it renders the page (see notes/rendering.md).
 //
 // In template mode it is one placeholder entry, which `Each` replaces with its item and which,
 // read outside an `Each`, is the page's own entry. Its id lands in the params of a dynamic route.

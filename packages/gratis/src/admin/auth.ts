@@ -1,4 +1,4 @@
-// Password-encrypted editor credentials (docs/auth.md). WebCrypto only, so it runs unchanged in
+// Password-encrypted editor credentials (notes/auth.md). WebCrypto only, so it runs unchanged in
 // the browser and in Node.
 //
 // In the blob, the storage location is plaintext: it isn't secret, and the SPA needs it to know where to sign.

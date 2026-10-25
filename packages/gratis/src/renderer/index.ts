@@ -1,7 +1,7 @@
 // render(template, { content, entry }, { DOMParser }) -> { html, deps }
 //
 // Pure: the same template and content give the same bytes in the browser and in Node, as long as
-// DOMParser is the browser's own or jsdom's (see docs/rendering.md#output-equivalence).
+// DOMParser is the browser's own or jsdom's (see notes/rendering.md).
 // `content` maps an entry key (`site` for a single, `posts/hello` for an entry) to its fields.
 // `entry` is the key of the page's own entry, which `route` sentinels read.
 

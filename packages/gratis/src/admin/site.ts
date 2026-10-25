@@ -1,4 +1,4 @@
-// Loading the site and saving, creating and deleting entries, per docs/edit-flow.md. No DOM UI
+// Loading the site and saving, creating and deleting entries, per notes/editing.md. No DOM UI
 // here: `DOMParser` is passed in so this runs in the browser and in Node alike. Every read and
 // write goes through the object cache, which holds the ETags the writes are conditional on.
 //
