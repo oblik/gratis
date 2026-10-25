@@ -23,7 +23,7 @@ To try the admin without a bucket: `pnpm --filter example-basic dev` (no login, 
 
 ## Notes
 
-- [overview](notes/overview.md): the moving parts, the bucket layout, hosting, the admin
+- [overview](notes/README.md): the moving parts, the bucket layout, hosting, the admin
 - [astro](notes/astro.md): adoption, the two-pass build, the emulator, deploy and pull, setup
 - [content](notes/content.md): collections and field builders, content files, `routes.json` and dependencies
 - [rendering](notes/rendering.md): sentinel templates, the pure renderer, the one constraint
