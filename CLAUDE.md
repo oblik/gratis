@@ -9,13 +9,16 @@ A CMS for tiny static sites with no servers: the site, the admin SPA and all con
 A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
 
 - `packages/gratis/src/`
+  - `core/`: framework-free, runs in the browser and in Node; `astro/` and `admin/` import it and it imports neither
+    - `schema.ts` and `bucket.ts`: the shapes of `schema.json` and `routes.json`, and the bucket layout
+    - `render.ts` and `query.ts`: `render()`, pure and DOM-based
+    - `storage.ts` (the S3 client and object cache), `site.ts` (load and the save flow), `auth.ts`
   - `astro/`
-    - the integration (`gratis`): config hooks, template pass, dev middleware
-    - `gratis/astro`: `defineCollection`, loaders, field builders, getters, `Each`, `If`
+    - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator over the repo files)
+    - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state and sentinels
     - the CLI: `deploy`, `pull`, `preview`
-  - `renderer/`: `render()`, pure and DOM-based, runs in the browser and in Node
   - `emulator/`: the S3 subset over HTTP, with folder, loader-files and in-memory backends
-  - `admin/`: the SPA; `site.ts` (save flow), `storage.ts` (S3 client and object cache) and `auth.ts` are framework-free
+  - `admin/`: the React SPA; `session.ts` holds the login, everything else is views
 - `examples/basic/`: the demo site
 - `scripts/`: setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit, the prototype of `gratis init`; they read credentials from the gitignored `.env`
 

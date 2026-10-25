@@ -4,17 +4,17 @@
 
 import { JSDOM } from 'jsdom'
 
-import { decryptCredentials } from '../packages/gratis/src/admin/auth.ts'
+import { decryptCredentials } from '../packages/gratis/src/core/auth.ts'
 import {
   loadSite,
   readEntry,
   saveEntry,
-} from '../packages/gratis/src/admin/site.ts'
+} from '../packages/gratis/src/core/site.ts'
 import {
   ConflictError,
   createCache,
   createStorage,
-} from '../packages/gratis/src/admin/storage.ts'
+} from '../packages/gratis/src/core/storage.ts'
 import { websiteOrigin } from './config.js'
 
 const origin = process.argv[2] ?? websiteOrigin

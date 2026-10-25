@@ -41,4 +41,4 @@ React with Tailwind, built by Vite into `dist/admin` and served as one `index.ht
 
 - React is there because of Lexical, whose plugins and examples are built for it.
 - A new dependency must replace something hard to build, as Lexical does for rich text, not something a thin wrapper over a native element can do. `<dialog>`, `popover`, `<details>`, and native form controls cover nearly everything a CMS form needs and bring accessibility for free.
-- The renderer, the save flow, the storage client, and auth are framework-free TypeScript that the UI imports and Node runs directly.
+- The renderer, the save flow, the storage client, and auth are framework-free TypeScript in `core/` that the UI imports and Node runs directly.

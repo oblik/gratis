@@ -3,21 +3,24 @@
 // gratis pull --bucket <name>     copy the bucket's content files into the repo
 // gratis preview [--port 4321]    serve dist/ with the storage emulator, as if it were the bucket
 //
-// Credentials and region come from the standard AWS environment (AWS_PROFILE or keys, AWS_REGION).
+// Credentials and region come from the environment: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+// AWS_SESSION_TOKEN (optional) and AWS_REGION.
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { dirname, join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
 
+import { encryptCredentials } from '../core/auth.ts'
 import {
-  GetObjectCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3'
-
-import { encryptCredentials } from '../admin/auth.ts'
-import type { Schema } from '../admin/site.ts'
+  AUTH,
+  collectionFolder,
+  CONTENT,
+  contentKey,
+  entryIds,
+  SCHEMA,
+} from '../core/bucket.ts'
+import { sourcePath, type Schema } from '../core/schema.ts'
+import { createStorage, type Storage } from '../core/storage.ts'
 import {
   contentType,
   createEmulator,
@@ -46,76 +49,63 @@ if (
   process.exit(1)
 }
 
-const s3 = new S3Client({})
-const bucket = args.bucket!
 const root = args.root!
+const dist = join(root, 'dist')
 
-// Never overwritten by a deploy: editors own these once the site is live.
-const EDITOR_OWNED = ['_gratis/content/', '_gratis/auth/', 'uploads/']
-// Content-hashed, so cacheable forever.
-const IMMUTABLE = ['_astro/', 'admin/assets/']
-
-async function get(key: string) {
-  try {
-    const res = await s3.send(
-      new GetObjectCommand({ Bucket: bucket, Key: key }),
+function bucketStorage(bucket: string): Storage {
+  const {
+    AWS_REGION: region,
+    AWS_ACCESS_KEY_ID: accessKeyId,
+    AWS_SECRET_ACCESS_KEY: secretAccessKey,
+    AWS_SESSION_TOKEN: sessionToken,
+  } = process.env
+  if (!region || !accessKeyId || !secretAccessKey)
+    throw new Error(
+      'set AWS_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY',
     )
-    return await res.Body!.transformToString()
-  } catch (error) {
-    if ((error as Error).name === 'NoSuchKey') return null
-    throw error
-  }
-}
-
-async function list(prefix: string) {
-  const keys: string[] = []
-  let token: string | undefined
-  do {
-    const res = await s3.send(
-      new ListObjectsV2Command({
-        Bucket: bucket,
-        Prefix: prefix,
-        ContinuationToken: token,
-      }),
-    )
-    keys.push(...(res.Contents ?? []).map(({ Key }) => Key!))
-    token = res.NextContinuationToken
-  } while (token)
-  return keys
+  return createStorage({
+    endpoint: `https://s3.${region}.amazonaws.com/${bucket}`,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    sessionToken,
+  })
 }
 
 // A collection's folder is mirrored: entries deleted in the bucket are deleted in the repo too, or
 // the next deploy would seed them again.
-async function pull() {
-  const schema = await get('_gratis/schema.json')
+async function pull(storage: Storage) {
+  const schema = await storage.get(SCHEMA)
   if (!schema)
     return console.log('nothing to pull: the bucket has no schema.json yet')
-  for (const [name, { single, storage }] of Object.entries(
-    (JSON.parse(schema) as Schema).collections,
+  for (const [name, collection] of Object.entries(
+    (JSON.parse(schema.text) as Schema).collections,
   )) {
-    if (single) {
-      const text = await get(`_gratis/content/${storage.path}`)
-      if (text == null) continue
-      await mkdir(dirname(join(root, storage.source)), { recursive: true })
-      await writeFile(join(root, storage.source), text)
-      console.log(`pulled ${name} -> ${storage.source}`)
+    if (collection.single) {
+      const file = await storage.get(contentKey(name))
+      if (!file) continue
+      await mkdir(dirname(join(root, collection.source)), { recursive: true })
+      await writeFile(join(root, collection.source), file.text)
+      console.log(`pulled ${name} -> ${collection.source}`)
       continue
     }
-    const folder = `_gratis/content/${storage.path}`
-    const names = (await list(folder))
-      .map((key) => key.slice(folder.length))
-      .filter((file) => /^[^/]+\.json$/.test(file))
-    await mkdir(join(root, storage.source), { recursive: true })
-    for (const file of names)
-      await writeFile(
-        join(root, storage.source, file),
-        (await get(folder + file))!,
-      )
-    for (const file of await readdir(join(root, storage.source))) {
-      if (file.endsWith('.json') && !names.includes(file))
-        await rm(join(root, storage.source, file))
+    const folder = collectionFolder(name)
+    const ids = entryIds(folder, await storage.list(folder))
+    const dir = join(root, collection.source)
+    await mkdir(dir, { recursive: true })
+    for (const id of ids) {
+      const file = await storage.get(contentKey(`${name}/${id}`))
+      await writeFile(join(root, sourcePath(collection, id)), file!.text)
     }
-    console.log(`pulled ${name} (${names.length} entries) -> ${storage.source}`)
+    for (const file of await readdir(dir))
+      if (
+        file.endsWith('.json') &&
+        !ids.includes(file.slice(0, -'.json'.length))
+      )
+        await rm(join(dir, file))
+    console.log(
+      `pulled ${name} (${ids.length} entries) -> ${collection.source}`,
+    )
   }
 }
 
@@ -127,43 +117,42 @@ async function* files(dir: string): AsyncGenerator<string> {
   }
 }
 
-async function upload(dist: string) {
+// Seeded on the first deploy and never replaced after: editors own them once the site is live.
+const SEEDED = [CONTENT]
+// Never uploaded: editors create them.
+const SKIPPED = [AUTH, 'uploads/']
+// Content-hashed, so cacheable forever.
+const IMMUTABLE = ['_astro/', 'admin/assets/']
+const under = (key: string, prefixes: string[]) =>
+  prefixes.some((prefix) => key.startsWith(prefix))
+
+async function upload(storage: Storage) {
   let uploaded = 0
   for await (const path of files(dist)) {
     const key = relative(dist, path).split('\\').join('/')
-    const editorOwned = EDITOR_OWNED.some((prefix) => key.startsWith(prefix))
-    if (key.startsWith('_gratis/auth/') || key.startsWith('uploads/')) continue
-    try {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: bucket,
-          Key: key,
-          Body: await readFile(path),
-          ContentType: contentType(key),
-          CacheControl: IMMUTABLE.some((prefix) => key.startsWith(prefix))
-            ? 'public, max-age=31536000, immutable'
-            : 'no-cache',
-          // Content files are seeded on the first deploy and never replaced after.
-          IfNoneMatch: editorOwned ? '*' : undefined,
-        }),
+    if (under(key, SKIPPED)) continue
+    const seeded = under(key, SEEDED)
+    await storage
+      .put(key, await readFile(path), {
+        type: contentType(key),
+        cacheControl: under(key, IMMUTABLE)
+          ? 'public, max-age=31536000, immutable'
+          : 'no-cache',
+        ifNoneMatch: seeded ? '*' : undefined,
+      })
+      .then(
+        () => uploaded++,
+        (error) => {
+          if (!(seeded && error.name === 'ConflictError')) throw error
+        },
       )
-      uploaded++
-    } catch (error) {
-      if (
-        editorOwned &&
-        (error as { $metadata?: { httpStatusCode?: number } }).$metadata
-          ?.httpStatusCode === 412
-      )
-        continue
-      throw error
-    }
   }
-  console.log(`uploaded ${uploaded} file(s) to ${bucket}`)
+  console.log(`uploaded ${uploaded} file(s) to ${args.bucket}`)
 }
 
 // The built site as the bucket, on localhost (a secure context, so the admin's WebCrypto works).
 // Saves write into dist/, so a rebuild starts over from the repo's content.
-async function preview(dist: string) {
+async function preview() {
   const port = Number(args.port)
   const origin = `http://localhost:${port}`
   const password = process.env.GRATIS_PREVIEW_PASSWORD ?? 'gratis-preview'
@@ -179,7 +168,7 @@ async function preview(dist: string) {
   const backend: Backend = {
     ...files,
     read: async (key) =>
-      key === '_gratis/auth/admin.json'
+      key === `${AUTH}admin.json`
         ? new TextEncoder().encode(blob)
         : files.read(key),
   }
@@ -191,12 +180,13 @@ async function preview(dist: string) {
 }
 
 if (command === 'preview') {
-  await preview(join(root, 'dist'))
-} else if (command === 'pull') {
-  await pull()
+  await preview()
 } else {
-  await pull()
-  const { build } = await import('astro')
-  await build({ root })
-  await upload(join(root, 'dist'))
+  const storage = bucketStorage(args.bucket!)
+  await pull(storage)
+  if (command === 'deploy') {
+    const { build } = await import('astro')
+    await build({ root })
+    await upload(storage)
+  }
 }

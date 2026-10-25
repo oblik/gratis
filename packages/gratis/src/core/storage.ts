@@ -1,15 +1,18 @@
-// The SPA's one storage client: the S3 REST API signed with the editor's key. Locally the same
-// requests will go to the emulator; only the endpoint and the auth differ.
+// The one storage client: the S3 REST API signed with the editor's key, over fetch, so it runs in
+// the browser and in Node alike. Locally the same requests go to the emulator; only the endpoint
+// and the credentials differ.
 
 import { AwsClient } from 'aws4fetch'
 
 export class ConflictError extends Error {}
 
-export interface Session {
+export interface Credentials {
+  /** The path-style endpoint of the bucket, `https://s3.<region>.amazonaws.com/<bucket>`. */
   endpoint: string
   region: string
   accessKeyId: string
   secretAccessKey: string
+  sessionToken?: string
 }
 export interface StoredObject {
   text: string
@@ -17,13 +20,21 @@ export interface StoredObject {
 }
 export interface PutOptions {
   type?: string
+  cacheControl?: string
+  /** Fails with ConflictError unless the object still has this ETag. */
   ifMatch?: string
+  /** Fails with ConflictError if the object exists. */
   ifNoneMatch?: '*'
 }
 
 export interface Storage {
   get(key: string): Promise<StoredObject | null>
-  put(key: string, body: string, options?: PutOptions): Promise<string>
+  /** Returns the new ETag. */
+  put(
+    key: string,
+    body: string | Uint8Array<ArrayBuffer>,
+    options?: PutOptions,
+  ): Promise<string>
   delete(key: string): Promise<void>
   /** Every key that starts with `prefix`, through ListObjectsV2. */
   list(prefix: string): Promise<string[]>
@@ -41,10 +52,12 @@ export function createStorage({
   region,
   accessKeyId,
   secretAccessKey,
-}: Session): Storage {
+  sessionToken,
+}: Credentials): Storage {
   const aws = new AwsClient({
     accessKeyId,
     secretAccessKey,
+    sessionToken,
     service: 's3',
     region,
   })
@@ -59,12 +72,10 @@ export function createStorage({
       return { text: await res.text(), etag: res.headers.get('etag')! }
     },
 
-    /**
-     * Writes with If-Match when given, so a stale ETag fails instead of overwriting, or with
-     * If-None-Match: * so an existing object does. Returns the new ETag.
-     */
-    async put(key, body, { type, ifMatch, ifNoneMatch } = {}) {
-      const headers: Record<string, string> = { 'Cache-Control': 'no-cache' }
+    async put(key, body, { type, cacheControl, ifMatch, ifNoneMatch } = {}) {
+      const headers: Record<string, string> = {
+        'Cache-Control': cacheControl ?? 'no-cache',
+      }
       if (type) headers['Content-Type'] = type
       if (ifMatch) headers['If-Match'] = ifMatch
       if (ifNoneMatch) headers['If-None-Match'] = ifNoneMatch
@@ -102,14 +113,17 @@ export function createStorage({
   }
 }
 
-export interface Cache extends Storage {
+/** Text objects keyed by path, each with the ETag its next write is conditional on. */
+export interface Cache {
   /** Reads through the cache; `fresh` refetches. A missing object is cached as null. */
   get(key: string, options?: { fresh?: boolean }): Promise<StoredObject | null>
   /** The cached object, without a request. */
   peek(key: string): StoredObject | null | undefined
+  put(key: string, body: string, options?: PutOptions): Promise<string>
+  delete(key: string): Promise<void>
+  list(prefix: string): Promise<string[]>
 }
 
-/** S3 objects keyed by path, each with its body and ETag. A write replaces the cached object. */
 export function createCache(storage: Storage): Cache {
   const objects = new Map<string, StoredObject | null>()
   return {

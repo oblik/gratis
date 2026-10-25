@@ -5,6 +5,9 @@
 // `content` maps an entry key (`site` for a single, `posts/hello` for an entry) to its fields.
 // `entry` is the key of the page's own entry, which `route` sentinels read.
 
+import { entryKey, parseKey } from './bucket.ts'
+import { queryFields, runQuery, type Query, type QueryEntry } from './query.ts'
+
 export type Content = Record<string, Record<string, unknown>>
 export interface Deps {
   entries: string[]
@@ -13,61 +16,22 @@ export interface Deps {
 export interface Dom {
   DOMParser: new () => DOMParser
 }
-export interface Query {
-  sort?: string
-  limit?: number
-  where?: Record<string, unknown>
-}
-export interface QueryEntry {
-  id: string
-  fields: Record<string, unknown>
-}
 
 const SENTINEL = /\{\{gratis:([^}]+)\}\}/g
 const SHOW_ELEMENT = 0x1,
   SHOW_TEXT = 0x4,
   SHOW_COMMENT = 0x80
 
-const compare = (a: unknown, b: unknown) =>
-  a == null ? (b == null ? 0 : 1) : b == null ? -1 : a < b ? -1 : a > b ? 1 : 0
-
-/** A collection query, the same in the getters and here: equality filter, sort (ties by id), limit. */
-export function runQuery<T extends QueryEntry>(
-  entries: T[],
-  { sort, limit, where }: Query = {},
-): T[] {
-  let result = entries.filter(({ fields }) =>
-    Object.entries(where ?? {}).every(([key, value]) => fields[key] === value),
-  )
-  const field = sort?.replace(/^-/, '')
-  const direction = sort?.startsWith('-') ? -1 : 1
-  result = result.toSorted(
-    (a, b) =>
-      (field && direction * compare(a.fields[field], b.fields[field])) ||
-      compare(a.id, b.id),
-  )
-  return limit == null ? result : result.slice(0, limit)
-}
-
-/** The fields a query's result depends on beyond its entries: a change to them can change the matches. */
-export const queryFields = ({ sort, where }: Query) => [
-  ...new Set([
-    ...(sort ? [sort.replace(/^-/, '')] : []),
-    ...Object.keys(where ?? {}),
-  ]),
-]
-
-/** The entries of a collection in `content`, by their `<collection>/<id>` keys. */
-export const collectionEntries = (
+/** The entries of a collection in `content`. */
+const collectionEntries = (
   content: Content,
   collection: string,
 ): QueryEntry[] =>
   Object.keys(content)
-    .filter((key) => key.startsWith(`${collection}/`))
-    .map((key) => ({
-      id: key.slice(collection.length + 1),
-      fields: content[key],
-    }))
+    .filter(
+      (key) => parseKey(key).collection === collection && key.includes('/'),
+    )
+    .map((key) => ({ id: parseKey(key).id!, fields: content[key] }))
 
 export function render(
   template: string,
@@ -97,7 +61,7 @@ export function render(
         `gratis: unsupported sentinel scope "${scope}" in {{gratis:${ref}}}`,
       )
     entries.add(key)
-    if (field === 'id') return key.slice(key.indexOf('/') + 1)
+    if (field === 'id') return parseKey(key).id
     return content[key]?.[field]
   }
   const text = (value: unknown) => (value == null ? '' : String(value))
@@ -192,15 +156,15 @@ export function render(
       throw new Error(
         `gratis: <!--gratis:each ${ref}--> lists other than queries are not supported yet`,
       )
-    const [, collection, json] = match
-    const query: Query = json ? JSON.parse(json) : {}
+    const [, collection, query] = match
+    const parsed: Query = query ? JSON.parse(query) : {}
     collections[collection] ??= new Set()
-    for (const field of queryFields(query)) collections[collection].add(field)
+    for (const field of queryFields(parsed)) collections[collection].add(field)
     for (const { id } of runQuery(
       collectionEntries(content, collection),
-      query,
+      parsed,
     )) {
-      const key = `${collection}/${id}`
+      const key = entryKey(collection, id)
       entries.add(key)
       const clone = item.cloneNode(true) as DocumentFragment
       conditionals(clone, key)

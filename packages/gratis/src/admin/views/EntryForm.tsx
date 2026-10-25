@@ -1,11 +1,18 @@
+// The form of one entry. The base is the saved version with its ETag; the draft is the editor's
+// changes on top of it, saved conditionally on that ETag (notes/editing.md).
+
 import { useBlocker } from '@tanstack/react-router'
 import { useState, type FormEvent, type ReactNode } from 'react'
 
-import { EntryProvider, useDirty, useField } from '../entry-context.tsx'
-import type { EntryStore } from '../entry.ts'
-import { equal } from '../path.ts'
-import type { Entry, Field, Fields } from '../site.ts'
-import { ConflictError } from '../storage.ts'
+import {
+  equal,
+  validate,
+  type Collection,
+  type Field,
+  type Fields,
+} from '../../core/schema.ts'
+import type { Entry, OnPage } from '../../core/site.ts'
+import { ConflictError } from '../../core/storage.ts'
 import { Button } from '../ui/Button.tsx'
 import { Checkbox } from '../ui/Checkbox.tsx'
 import { Dialog } from '../ui/Dialog.tsx'
@@ -13,14 +20,15 @@ import { Status, type StatusMessage } from '../ui/Status.tsx'
 import { TextField } from '../ui/TextField.tsx'
 
 export interface EntryFormProps {
-  store: EntryStore
   title: string
-  fields: Record<string, Field>
+  collection: Collection
+  /** The version the edit starts from. */
+  entry: Entry
   /** Writes the draft and renders the affected pages; returns them. */
   save(
     fields: Fields,
     etag: string | undefined,
-    onPage: (path: string) => void,
+    onPage: OnPage,
   ): Promise<string[]>
   /** The saved version: the cached one after a save, refetched (`fresh`) after a conflict. */
   reload(fresh: boolean): Promise<Entry>
@@ -34,18 +42,10 @@ export interface EntryFormProps {
   requireChanges?: boolean
 }
 
-export function EntryForm(props: EntryFormProps) {
-  return (
-    <EntryProvider store={props.store}>
-      <Form {...props} />
-    </EntryProvider>
-  )
-}
-
-function Form({
-  store,
+export function EntryForm({
   title,
-  fields,
+  collection,
+  entry,
   save,
   reload,
   onSaved,
@@ -53,38 +53,43 @@ function Form({
   actions,
   requireChanges = true,
 }: EntryFormProps) {
-  const dirty = useDirty()
+  const [base, setBase] = useState(entry)
+  const [draft, setDraft] = useState(entry.fields)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<StatusMessage | null>(null)
   const [saving, setSaving] = useState(false)
   const [conflict, setConflict] = useState(false)
+  const dirty = !equal(draft, base.fields)
 
-  const hasChanges = () => {
-    const { draft, base } = store.getState()
-    return !equal(draft, base)
-  }
   const blocker = useBlocker({
-    shouldBlockFn: hasChanges,
-    enableBeforeUnload: hasChanges,
+    shouldBlockFn: () => dirty,
+    enableBeforeUnload: () => dirty,
     withResolver: true,
   })
 
+  const edit = (name: string, value: unknown) => {
+    setDraft((draft) => ({ ...draft, [name]: value }))
+    setErrors(({ [name]: _, ...rest }) => rest)
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const state = store.getState()
-    if (!state.check())
+    const errors = validate(collection, draft)
+    setErrors(errors)
+    if (Object.keys(errors).length)
       return setMessage({
         text: 'Fix the highlighted fields first.',
         error: true,
       })
-    const fields = state.draft
     setSaving(true)
     setConflict(false)
     try {
       setMessage({ text: 'Saving…' })
-      const pages = await save(fields, state.etag, (path) =>
+      const pages = await save(draft, base.etag, (path) =>
         setMessage({ text: `Rendered ${path}` }),
       )
-      state.commit(fields, (await reload(false)).etag)
+      // The draft keeps any edits made meanwhile.
+      setBase({ fields: draft, etag: (await reload(false)).etag })
       setMessage({
         text: pages.length
           ? `Saved. ${pages.length} page(s) updated.`
@@ -109,9 +114,12 @@ function Form({
     }
   }
 
+  /** Starts over from the latest version, dropping the draft. */
   async function loadLatest() {
     const latest = await reload(true)
-    store.getState().reset(latest.fields, latest.etag)
+    setBase(latest)
+    setDraft(latest.fields)
+    setErrors({})
     setConflict(false)
     setMessage({ text: 'Loaded the latest version.' })
   }
@@ -120,8 +128,15 @@ function Form({
     <form onSubmit={submit} className="grid gap-4">
       <h2 className="text-lg font-semibold">{title}</h2>
       {header}
-      {Object.entries(fields).map(([key, field]) => (
-        <FieldInput key={key} name={key} field={field} />
+      {Object.entries(collection.fields).map(([name, field]) => (
+        <FieldInput
+          key={name}
+          field={field}
+          value={draft[name]}
+          dirty={!equal(draft[name], base.fields[name])}
+          error={errors[name]}
+          onChange={(value) => edit(name, value)}
+        />
       ))}
       <div className="flex items-center gap-3">
         <Button
@@ -151,29 +166,37 @@ function Form({
   )
 }
 
-function FieldInput({ name, field }: { name: string; field: Field }) {
-  const { value, dirty, error, set } = useField([name])
+function FieldInput({
+  field,
+  value,
+  dirty,
+  error,
+  onChange,
+}: {
+  field: Field
+  value: unknown
+  dirty: boolean
+  error?: string
+  onChange(value: unknown): void
+}) {
   if (field.type === 'boolean')
     return (
       <Checkbox
         label={field.label}
         checked={value === true}
-        onChange={set}
+        onChange={onChange}
         dirty={dirty}
         error={error}
       />
     )
-  if (field.type === 'text') {
-    return (
-      <TextField
-        label={field.label}
-        multiline={field.multiline}
-        value={value == null ? '' : String(value)}
-        onChange={set}
-        dirty={dirty}
-        error={error}
-      />
-    )
-  }
-  return <p className="text-red-600">{name}: unsupported field type</p>
+  return (
+    <TextField
+      label={field.label}
+      multiline={field.multiline}
+      value={value == null ? '' : String(value)}
+      onChange={onChange}
+      dirty={dirty}
+      error={error}
+    />
+  )
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { decryptCredentials, encryptCredentials } from '../src/admin/auth.ts'
+import { decryptCredentials, encryptCredentials } from '../src/core/auth.ts'
 
 const keys = {
   accessKeyId: 'AKIDEXAMPLE',

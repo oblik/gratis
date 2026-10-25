@@ -1,6 +1,5 @@
 import { getRouteApi, Link } from '@tanstack/react-router'
 
-import { collectionLabel } from '../site.ts'
 import { ChevronIcon } from '../ui/icons.tsx'
 
 const route = getRouteApi('/_app/')
@@ -17,14 +16,14 @@ export function Home() {
         <li key={name}>
           {collection.single ? (
             <Link to="/singles/$name" params={{ name }} className={row}>
-              {collectionLabel(name, collection)} <ChevronIcon />
+              {collection.label} <ChevronIcon />
             </Link>
           ) : (
             <Link to="/collections/$name" params={{ name }} className={row}>
               <span>
-                {collectionLabel(name, collection)}{' '}
+                {collection.label}{' '}
                 <span className="text-gray-500">
-                  ({site.entries[name]?.length ?? 0})
+                  ({site.entries[name].length})
                 </span>
               </span>
               <ChevronIcon />

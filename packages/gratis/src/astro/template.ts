@@ -1,10 +1,15 @@
-// Shared across the config's module graph and the content config's, which Vite may load as separate
-// instances in the same process, so the state lives on globalThis.
+// The template pass (notes/astro.md): a second build in which the getters hand out placeholders
+// whose reads emit sentinels, and `Each` and `If` wrap their content in markers.
+//
+// The state is shared across the config's module graph and the content config's, which Vite may
+// load as separate instances in the same process, so it lives on globalThis.
 
-import type { CollectionConfig } from './schema.ts'
+import type { Collection } from '../core/schema.ts'
 
 interface State {
-  collections: Record<string, CollectionConfig>
+  /** What the loaders recorded, compiled into schema.json by the build and by the dev server. */
+  collections: Record<string, Collection>
+  /** The template pass's output, per route pattern. */
   templateRoutes?: Map<string, URL[]>
 }
 

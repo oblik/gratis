@@ -1,8 +1,12 @@
 // The editor's session: the decrypted keys in sessionStorage, and the site loaded with them.
 
-import { decryptCredentials, type AuthBlob } from './auth.ts'
-import { loadSite, renderPending, type Site } from './site.ts'
-import { createCache, createStorage, type Session } from './storage.ts'
+import { decryptCredentials, type AuthBlob } from '../core/auth.ts'
+import { loadSite, renderPending, type Site } from '../core/site.ts'
+import {
+  createCache,
+  createStorage,
+  type Credentials,
+} from '../core/storage.ts'
 
 const SESSION_KEY = 'gratis.session'
 
@@ -20,7 +24,7 @@ let opened: Promise<Opened> | null = null
 export const isLocal = () =>
   document.querySelector('meta[name="gratis-storage"][content="local"]') != null
 
-function session(): Session | null {
+function session(): Credentials | null {
   if (isLocal())
     return {
       endpoint: location.origin,
@@ -61,7 +65,7 @@ export async function logIn(username: string, password: string) {
   }
   sessionStorage.setItem(
     SESSION_KEY,
-    JSON.stringify({ ...blob.storage, ...keys } satisfies Session),
+    JSON.stringify({ ...blob.storage, ...keys } satisfies Credentials),
   )
 }
 

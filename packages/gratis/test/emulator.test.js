@@ -12,12 +12,12 @@ import {
   loadSite,
   readEntry,
   saveEntry,
-} from '../src/admin/site.ts'
+} from '../src/core/site.ts'
 import {
   ConflictError,
   createCache,
   createStorage,
-} from '../src/admin/storage.ts'
+} from '../src/core/storage.ts'
 import { createEmulator, memoryBackend } from '../src/emulator/index.ts'
 
 const { DOMParser } = new JSDOM('').window
@@ -29,10 +29,12 @@ const bucket = () =>
       collections: {
         site: {
           single: true,
-          storage: { path: 'site.json', source: 'src/data/site.json' },
+          label: 'Site',
+          source: 'src/data/site.json',
           fields: { title: { type: 'text', label: 'Title' } },
         },
       },
+      routes: {},
     }),
     '_gratis/routes.json': json({
       pages: {
@@ -137,12 +139,14 @@ const blog = () =>
       collections: {
         site: {
           single: true,
-          storage: { path: 'site.json', source: 'src/data/site.json' },
+          label: 'Site',
+          source: 'src/data/site.json',
           fields: { title: { type: 'text', label: 'Title' } },
         },
         posts: {
           single: false,
-          storage: { path: 'posts/', source: 'src/data/posts/' },
+          label: 'Posts',
+          source: 'src/data/posts/',
           fields: {
             title: { type: 'text', label: 'Title' },
             date: { type: 'text', label: 'Date' },

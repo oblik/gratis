@@ -1,6 +1,6 @@
 import { getRouteApi, Link } from '@tanstack/react-router'
 
-import { collectionLabel, entryKey } from '../site.ts'
+import { contentKey, entryKey } from '../../core/bucket.ts'
 import { ChevronIcon } from '../ui/icons.tsx'
 
 const route = getRouteApi('/_app/collections/$name/')
@@ -14,15 +14,13 @@ export function Collection() {
   const { name } = route.useParams()
   const { site } = route.useRouteContext()
   const collection = site.schema.collections[name]
-  const ids = site.entries[name] ?? []
+  const ids = site.entries[name]
   // An entry is shown by its first text field, like a title, and its id.
   const titleField = Object.keys(collection.fields).find(
     (key) => collection.fields[key].type === 'text',
   )
   const title = (id: string) => {
-    const file = site.objects.peek(
-      `_gratis/content/${collection.storage.path}${id}.json`,
-    )
+    const file = site.objects.peek(contentKey(entryKey(name, id)))
     const value =
       titleField && file ? JSON.parse(file.text)[titleField] : undefined
     return typeof value === 'string' && value ? value : id
@@ -31,9 +29,7 @@ export function Collection() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
-          {collectionLabel(name, collection)}
-        </h2>
+        <h2 className="text-lg font-semibold">{collection.label}</h2>
         <Link
           to="/collections/$name/new"
           params={{ name }}
