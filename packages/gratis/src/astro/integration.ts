@@ -58,7 +58,7 @@ export default function gratis(): AstroIntegration {
     hooks: {
       'astro:config:setup': ({ config, updateConfig }) => {
         root = config.root
-        // The getters import astro:content lazily, so Vite has to process the package.
+        // The getters import astro:content, so Vite has to process the package.
         updateConfig({ vite: { ssr: { noExternal: ['gratis'] } } })
       },
       // The admin at /admin/ and the storage emulator over the content files, on the dev server's origin.

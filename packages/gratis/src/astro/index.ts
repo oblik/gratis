@@ -1,7 +1,12 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
-import type { CollectionEntry, CollectionKey } from 'astro:content'
+import {
+  getCollection as astroGetCollection,
+  getEntry as astroGetEntry,
+  type CollectionEntry,
+  type CollectionKey,
+} from 'astro:content'
 import type { Loader } from 'astro/loaders'
 import { z } from 'astro/zod'
 
@@ -152,8 +157,7 @@ export async function getEntry<C extends CollectionKey>(
   collection: C,
   id?: string,
 ): Promise<Entry<C>> {
-  const { getEntry } = await import('astro:content')
-  const entry = await getEntry(collection, id ?? collection)
+  const entry = await astroGetEntry(collection, id ?? collection)
   if (!entry)
     throw new Error(`gratis: no entry ${id ?? collection} in ${collection}`)
   return { id: entry.id, collection, ...entry.data }
@@ -188,8 +192,7 @@ export async function getCollection<C extends CollectionKey>(
       [MARKER]: `query:${collection}${json}`,
     }) as Entry<C>[]
   }
-  const { getCollection } = await import('astro:content')
-  const entries = (await getCollection(collection)).map(
+  const entries = (await astroGetCollection(collection)).map(
     (entry: { id: string; data: unknown }) => ({
       id: entry.id,
       fields: entry.data as Record<string, unknown>,
