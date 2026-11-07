@@ -36,7 +36,11 @@ export interface RouteBinding {
 
 export interface Schema {
   collections: Record<string, Collection>
-  routes: Record<string, RouteBinding>
+  /**
+   * How to make the page for a new entry, by template. Static routes have none:
+   * their pages already exist, in routes.json.
+   */
+  bindings: Record<string, RouteBinding>
 }
 
 /** Every field is present, so the build's schema accepts the new entry. */

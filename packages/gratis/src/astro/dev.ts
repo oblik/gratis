@@ -34,7 +34,7 @@ export function devBackend({
   const content = repoContent(root, () => state().collections)
   const schema = (): Schema => ({
     collections: state().collections,
-    routes: {},
+    bindings: {},
   })
   const isContent = (key: string) => parseContentKey(key) != null
 

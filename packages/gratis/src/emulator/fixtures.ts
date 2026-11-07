@@ -14,7 +14,7 @@ export const bucket = () =>
           fields: { title: { type: 'text', label: 'Title' } },
         },
       },
-      routes: {},
+      bindings: {},
     }),
     '_gratis/routes.json': json({
       pages: {
@@ -57,7 +57,7 @@ export const blog = () =>
           },
         },
       },
-      routes: {
+      bindings: {
         '/blog/[slug]': {
           collection: 'posts',
           param: 'slug',

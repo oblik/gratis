@@ -59,7 +59,7 @@ export function planCreate(
       `"${id}" isn't a valid id: use lowercase letters, digits and dashes`,
     )
   const key = entryKey(collection, id)
-  const added = entryPages(site.schema.routes, collection, id)
+  const added = entryPages(site.schema.bindings, collection, id)
   const pages = { ...site.routes.pages, ...added }
   return {
     write: { key: contentKey(key), put: json(fields), ifNoneMatch: '*' },

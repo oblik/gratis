@@ -24,7 +24,7 @@ const page = (
 const site: SiteState = {
   schema: {
     collections: {},
-    routes: {
+    bindings: {
       '/blog/[slug]': {
         collection: 'posts',
         param: 'slug',

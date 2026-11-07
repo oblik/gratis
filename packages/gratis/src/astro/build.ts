@@ -93,7 +93,7 @@ async function writeRoutes(
   const built = Object.fromEntries(
     [...assets].map(([pattern, [url]]) => [pattern, unixPath(dir, url)]),
   )
-  const { pages, unbound } = listPages(built, schema.routes, ids)
+  const { pages, unbound } = listPages(built, schema.bindings, ids)
   for (const pattern of unbound)
     logger.warn(
       `${pattern}: only dynamic routes over a Gratis collection's ids are supported; it won't be editable`,
@@ -137,9 +137,9 @@ export async function finishBuild({
 }) {
   const scratch = new URL('.gratis/', root)
   const templateRoutes = await buildTemplates(root, scratch)
-  const routes = await writeTemplates(scratch, dir, templateRoutes)
+  const bindings = await writeTemplates(scratch, dir, templateRoutes)
 
-  const schema: Schema = { collections: state().collections, routes }
+  const schema: Schema = { collections: state().collections, bindings }
   await write(new URL(SCHEMA, dir), json(schema))
 
   const repo = repoContent(root, () => schema.collections)
