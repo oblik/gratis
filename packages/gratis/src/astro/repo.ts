@@ -13,9 +13,13 @@ import {
   parseContentKey,
   parseKey,
 } from '../core/bucket.ts'
-import { sourcePath, type Collection } from '../core/schema.ts'
+import type { Collection } from '../core/schema.ts'
 import type { Content } from '../core/template/render.ts'
 import { orNull, type Backend } from '../emulator/index.ts'
+
+/** The repo path of an entry's file: the single's file, or `<id>.json` in the collection's folder. */
+const sourcePath = ({ single, source }: Collection, id?: string) =>
+  single ? source : `${source}${id}.json`
 
 /**
  * The content files of `collections` under `root`. A getter, because in dev the loaders record

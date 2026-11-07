@@ -1,3 +1,7 @@
+// The `gratis` Astro integration (notes/astro.md): in dev it serves the admin and the storage
+// emulator on the dev server's origin, and after `astro build` it runs the template pass and writes
+// _gratis/ and the admin into dist/ (build.ts).
+
 import { access } from 'node:fs/promises'
 
 import type { AstroIntegration } from 'astro'

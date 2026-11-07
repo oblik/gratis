@@ -38,10 +38,6 @@ export interface Schema {
   routes: Record<string, RouteBinding>
 }
 
-/** The repo path of an entry's file: the single's file, or `<id>.json` in the collection's folder. */
-export const sourcePath = ({ single, source }: Collection, id?: string) =>
-  single ? source : `${source}${id}.json`
-
 /** A new entry's fields: every field present, so the build's schema accepts it. */
 export const emptyFields = ({ fields }: Collection): Fields =>
   Object.fromEntries(

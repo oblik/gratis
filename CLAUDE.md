@@ -8,21 +8,23 @@ A CMS for tiny static sites with no servers: the site, the admin SPA and all con
 
 A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
 
-- `packages/gratis/src/`
-  - `core/`: framework-free, runs in the browser and in Node; `astro/` and `admin/` import it and it imports neither
-    - `schema.ts` and `bucket.ts`: the shape of `schema.json`, and the bucket layout
-    - `routes.ts`: `routes.json` and the pure questions about it: which pages a site or an entry has, which pages an edit re-renders
-    - `template/`: `sentinels.ts` (the template language: formats and parses every sentinel and marker), `render.ts` (`render()`, pure and DOM-based) and `query.ts`
-    - `site.ts` (loading the site), `plan.ts` (what an edit changes, as data, pure), `save.ts` (carrying out a plan: the save flow of notes/editing.md)
-    - `storage.ts` (the S3 client and object cache), `auth.ts`
-  - `astro/`
-    - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator's backend in dev)
-    - `repo.ts`: the repo's content files under the bucket's content keys, the one mapping between the two layouts; the loaders, the build, dev and pull all go through it
-    - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`
-    - `template-mode.ts`: everything that differs in the template pass, in the order the pass happens; `state.ts` is what the hooks and the loaders share
-    - the CLI (`cli.ts`): `deploy`, `pull` (`pull.ts`), `preview`
-  - `emulator/`: the S3 subset in three layers: `backends.ts` (bytes in memory or a folder; `astro/repo.ts` is the repo's), `objects.ts` (ETags and conditional writes, and `emulatedStorage` for core in process), `http.ts` (the wire format and the website endpoint)
-  - `admin/`: the React SPA; `session.ts` holds the login, everything else is views
+- `packages/gratis/src/`, in reading order; each file opens with what it's for:
+  1. `core/`: framework-free, runs in the browser and in Node; `astro/`, `emulator/` and `admin/` import it and it imports none of them
+     - `bucket.ts`: every name things go by (entry key, content key, template id, page path…) and the bucket's layout
+     - `schema.ts`: `schema.json`, the collections and their fields
+     - `template/`: `sentinels.ts` (the template language: every sentinel and marker), `query.ts`, `render.ts` (`render()`, pure and DOM-based)
+     - `routes.ts`: `routes.json` and the pure questions about it: which pages a site or an entry has, which pages an edit re-renders
+     - `site.ts` (loading the site), `plan.ts` (what an edit changes, as data, pure), `save.ts` (carrying out a plan: the save flow of notes/editing.md)
+     - `storage.ts` (the S3 client and the object cache), `auth.ts`
+  2. `emulator/`: the S3 subset in three layers: `backends.ts` (bytes in memory or a folder), `objects.ts` (ETags and conditional writes, and `emulatedStorage` for core in process), `http.ts` (the wire format and the website endpoint)
+  3. `astro/`
+     - what a site imports from `gratis/astro`: `fields.ts`, `collection.ts` (`defineCollection`, the loaders), `getters.ts`, `Each`, `If`
+     - `template-mode.ts`: everything that differs in the template pass, in the order the pass happens
+     - `repo.ts`: the repo's content files under the bucket's content keys, the one mapping between the two layouts
+     - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator's backend in dev), `state.ts` (what the hooks and the loaders share)
+     - the CLI (`cli.ts`): `deploy`, `pull` (`pull.ts`), `preview`
+  4. `admin/`: the React SPA; `session.ts` holds the login, everything else is views
+- `packages/gratis/test/`: a file per module, named after it; `fixtures.js` has the test buckets
 - `examples/basic/`: the demo site
 - `scripts/`: setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit, the prototype of `gratis init`; they read credentials from the gitignored `.env`
 

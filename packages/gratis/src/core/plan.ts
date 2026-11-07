@@ -2,14 +2,16 @@
 // the loaded schema, routes and entry ids and returns the change as data, which save.ts then
 // carries out. So "what does deleting this entry do" is answered without storage or a DOM.
 
-import { contentKey, entryKey, isEntryId, json, parseKey } from './bucket.ts'
 import {
-  affectedBy,
-  dependents,
-  entryPages,
-  type Page,
-  type Routes,
-} from './routes.ts'
+  contentKey,
+  entryKey,
+  isEntryId,
+  json,
+  parseKey,
+  type ObjectKey,
+  type PagePath,
+} from './bucket.ts'
+import { affectedBy, dependents, entryPages, type Routes } from './routes.ts'
 import { changedFields, type Fields, type Schema } from './schema.ts'
 
 /** The part of a loaded site a plan reads. */
@@ -22,20 +24,20 @@ export interface SiteState {
 
 /** The write an edit stands or falls on: an entry's content file. */
 export type Write =
-  | { key: string; put: string; ifMatch?: string; ifNoneMatch?: '*' }
-  | { key: string; delete: true }
+  | { key: ObjectKey; put: string; ifMatch?: string; ifNoneMatch?: '*' }
+  | { key: ObjectKey; delete: true }
 
 export interface Edit {
   /** The write, if the edit makes one. Nothing below happens unless it succeeds. */
   write?: Write
   /** routes.json's pages after the edit, when it adds or removes any. */
-  pages?: Record<string, Page>
+  pages?: Routes['pages']
   /** The entry ids after the edit, when it adds or removes any. */
   entries?: Record<string, string[]>
   /** Objects deleted after the write: the pages of a deleted entry. */
-  remove: string[]
+  remove: ObjectKey[]
   /** Pages rendered after the write, in this order. */
-  render: string[]
+  render: PagePath[]
 }
 
 /**

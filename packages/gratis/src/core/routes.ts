@@ -5,29 +5,40 @@
 // A page is named by its path (`/`, `/blog/hello`). A dynamic route's pages come from a binding
 // in schema.json: one page per entry of the bound collection.
 
-import { entryKey, parseKey, templateId } from './bucket.ts'
+import {
+  entryKey,
+  parseKey,
+  templateId,
+  type EntryKey,
+  type ObjectKey,
+  type PagePath,
+  type TemplateId,
+} from './bucket.ts'
 import type { RouteBinding } from './schema.ts'
 import type { Deps } from './template/render.ts'
 
 export interface Page {
-  /** The template id, see templateId(). */
-  template: string
-  /** The object key of the page's HTML. */
-  file: string
-  /** The entry key of a dynamic route's page: the entry its `route` sentinels read. */
-  entry?: string
+  template: TemplateId
+  /** The page's HTML. */
+  file: ObjectKey
+  /** A dynamic route's page's own entry: the one its `route` sentinels read. */
+  entry?: EntryKey
   deps: Deps
   /** When the page was last rendered, or `''` if it hasn't been yet. */
   updated: string
 }
 export interface Routes {
-  pages: Record<string, Page>
+  pages: Record<PagePath, Page>
   /** Pages queued for rendering by a save in progress, or interrupted (notes/editing.md). */
-  _pending: string[]
+  _pending: PagePath[]
 }
 
 /** A page that hasn't been rendered yet: all it is known to read is its own entry. */
-const unrendered = (template: string, file: string, entry?: string): Page => ({
+const unrendered = (
+  template: TemplateId,
+  file: ObjectKey,
+  entry?: EntryKey,
+): Page => ({
   template,
   file,
   ...(entry && { entry }),

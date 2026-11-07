@@ -6,7 +6,7 @@
 // `content` maps an entry key (`site` for a single, `posts/hello` for an entry) to its fields.
 // `entry` is the key of the page's own entry, which `route` sentinels read.
 
-import { entryKey, parseKey } from '../bucket.ts'
+import { entryKey, parseKey, type EntryKey } from '../bucket.ts'
 import { queryFields, runQuery, type QueryEntry } from './query.ts'
 import {
   formatValue,
@@ -17,9 +17,11 @@ import {
   type ValueRef,
 } from './sentinels.ts'
 
-export type Content = Record<string, Record<string, unknown>>
+/** Every entry's fields, by entry key. */
+export type Content = Record<EntryKey, Record<string, unknown>>
+/** What a page read: entries, and the fields each collection's queries sort or filter by. */
 export interface Deps {
-  entries: string[]
+  entries: EntryKey[]
   collections: Record<string, string[]>
 }
 export interface Dom {
