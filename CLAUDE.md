@@ -41,7 +41,7 @@ A pnpm workspace:
 To try the admin without a bucket:
 
 - `pnpm --filter example-basic dev`: no login, writes `src/data/`
-- `pnpm build`, then `pnpm --filter example-basic preview`: `dist/` as the bucket, log in as `admin` / `gratis-preview`
+- `pnpm build`, `pnpm --filter example-basic run deploy`, then `pnpm --filter example-basic preview`: `.gratis/bucket/` as the bucket, log in as `admin` / `gratis-preview`, and `pnpm --filter example-basic pull` brings the edits back
 
 ## Notes
 

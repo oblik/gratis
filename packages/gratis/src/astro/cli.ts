@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 // gratis deploy --bucket <name>   pull content, build, upload dist/
 // gratis pull --bucket <name>     copy the bucket's content files into the repo
-// gratis preview [--port 4321]    serve dist/ as if it were the bucket
+// gratis preview [--port 4321]    serve the local bucket as if it were S3
 //
 // Credentials and region come from the environment: AWS_ACCESS_KEY_ID,
 // AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN (optional) and AWS_REGION.
 //
-// --endpoint <url> replaces --bucket with any path-style bucket URL, such as
-// a running `gratis preview` at http://localhost:4321. Credentials then
-// default to dummy ones, which only the emulator accepts.
+// --local instead of --bucket uses the local bucket, a folder that
+// `gratis preview` serves.
 import { createServer } from 'node:http'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -19,6 +18,7 @@ import { AUTH } from '../core/bucket.ts'
 import { createStorage, type Storage } from '../core/storage.ts'
 import {
   createEmulator,
+  emulatedStorage,
   folderBackend,
   type Backend,
 } from '../emulator/index.ts'
@@ -32,30 +32,39 @@ const {
   allowPositionals: true,
   options: {
     bucket: { type: 'string' },
-    endpoint: { type: 'string' },
+    local: { type: 'boolean' },
     root: { type: 'string', default: process.cwd() },
     port: { type: 'string', default: '4321' },
   },
 })
 if (
-  !(['deploy', 'pull'].includes(command!) && (args.bucket || args.endpoint)) &&
+  !(
+    ['deploy', 'pull'].includes(command!) &&
+    Boolean(args.bucket) !== Boolean(args.local)
+  ) &&
   command !== 'preview'
 ) {
   console.error(
-    'usage: gratis <deploy|pull> (--bucket <name> | --endpoint <url>) [--root <dir>]\n       gratis preview [--root <dir>] [--port <port>]',
+    'usage: gratis <deploy|pull> (--bucket <name> | --local) [--root <dir>]\n       gratis preview [--root <dir>] [--port <port>]',
   )
   process.exit(1)
 }
 
 const root = args.root!
 const dist = join(root, 'dist')
+/**
+ * Outlives builds, like a real bucket: `deploy --local` seeds the content once
+ * and editors' saves in the preview stay until it's deleted.
+ */
+const localBucket = join(root, '.gratis/bucket')
+const show = (dir: string) => relative(process.cwd(), dir) || '.'
 
 function bucketStorage(): Storage {
-  const local = args.endpoint ? 'local' : undefined
+  if (args.local) return emulatedStorage(folderBackend(localBucket))
   const {
-    AWS_REGION: region = local,
-    AWS_ACCESS_KEY_ID: accessKeyId = local,
-    AWS_SECRET_ACCESS_KEY: secretAccessKey = local,
+    AWS_REGION: region,
+    AWS_ACCESS_KEY_ID: accessKeyId,
+    AWS_SECRET_ACCESS_KEY: secretAccessKey,
     AWS_SESSION_TOKEN: sessionToken,
   } = process.env
   if (!region || !accessKeyId || !secretAccessKey)
@@ -63,9 +72,7 @@ function bucketStorage(): Storage {
       'set AWS_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY',
     )
   return createStorage({
-    endpoint:
-      args.endpoint?.replace(/\/+$/, '') ??
-      `https://s3.${region}.amazonaws.com/${args.bucket}`,
+    endpoint: `https://s3.${region}.amazonaws.com/${args.bucket}`,
     region,
     accessKeyId,
     secretAccessKey,
@@ -74,9 +81,8 @@ function bucketStorage(): Storage {
 }
 
 /**
- * The built site as the bucket, on localhost (a secure context, so the admin's
- * WebCrypto works). Saves write into dist/, so a rebuild starts over from the
- * repo's content.
+ * The local bucket over HTTP on localhost (a secure context, so the admin's
+ * WebCrypto works), with a login that needs no `_gratis/auth/` in it.
  */
 async function preview() {
   const port = Number(args.port)
@@ -90,7 +96,11 @@ async function preview() {
       { endpoint: origin, region: 'local' },
     ),
   )
-  const files = folderBackend(dist)
+  const files = folderBackend(localBucket)
+  if (!(await files.list('')).length)
+    console.warn(
+      `${show(localBucket)} is empty: run \`gratis deploy --local\` first`,
+    )
   const backend: Backend = {
     ...files,
     read: async (key) =>
@@ -100,7 +110,7 @@ async function preview() {
   }
   const handle = createEmulator(backend, { website: true })
   createServer((req, res) => handle(req, res)).listen(port, 'localhost', () => {
-    console.log(`serving ${relative(process.cwd(), dist) || '.'} at ${origin}/`)
+    console.log(`serving ${show(localBucket)} at ${origin}/`)
     console.log(`admin: ${origin}/admin/, log in as admin / ${password}`)
   })
 }
@@ -115,7 +125,7 @@ if (command === 'preview') {
     await build({ root })
     const uploaded = await upload(storage, dist)
     console.log(
-      `uploaded ${uploaded} file(s) to ${args.bucket ?? args.endpoint}`,
+      `uploaded ${uploaded} file(s) to ${args.bucket ?? show(localBucket)}`,
     )
   }
 }

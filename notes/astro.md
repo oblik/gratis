@@ -11,7 +11,7 @@ Gratis attaches to an ordinary Astro project as an integration. `astro dev` and 
    - Hardcoded strings become a `site` single the same way.
    - The other collections stay plain Astro collections, baked into the pages as before.
 3. In dev the site renders from the content files and the admin at `/admin/` edits those files on disk.
-4. `astro build` produces the site exactly as it would without Gratis, plus `/_gratis/` and the admin. `gratis preview` serves the result as if it were the bucket, with the full edit flow.
+4. `astro build` produces the site exactly as it would without Gratis, plus `/_gratis/` and the admin. `gratis deploy --local` puts it in a local bucket, a folder, and `gratis preview` serves that with the full edit flow.
 5. `gratis deploy` uploads it. From then on editors change content in the bucket, and `gratis pull` brings it back into the repo.
 
 ## Two build passes
@@ -35,7 +35,7 @@ Stripping markers out of a single marked build was rejected: it means re-seriali
 Locally the admin talks to a small HTTP server that implements the S3 subset the admin uses: get, put, delete, head, ETags, conditional writes and listing a folder.
 
 - In `astro dev` it writes entries straight to the loaders' files and Astro re-renders. Auth is switched off.
-- For `gratis preview` it serves `dist/`, and answers like the bucket's website endpoint.
+- For `gratis preview` it serves the local bucket, `.gratis/bucket/`, and answers like the bucket's website endpoint. It outlives builds like a real bucket, so `deploy --local` and `pull --local` behave as they do against S3.
 
 It's HTTP rather than a JavaScript storage interface on purpose: the admin has exactly one code path, and only the endpoint and the credentials differ between a laptop and production. A storage interface with two implementations would leave the production path untested locally. It's a command of Gratis's own rather than `astro preview` because `astro preview` gives integrations no hook and drops the project's Vite plugins.
 

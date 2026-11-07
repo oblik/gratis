@@ -135,7 +135,8 @@ export async function finishBuild({
   assets: Map<string, URL[]>
   logger: AstroIntegrationLogger
 }) {
-  const scratch = new URL('.gratis/', root)
+  // A folder of its own: Astro empties it, and the local bucket is a sibling.
+  const scratch = new URL('.gratis/build/', root)
   const templateRoutes = await buildTemplates(root, scratch)
   const bindings = await writeTemplates(scratch, dir, templateRoutes)
 

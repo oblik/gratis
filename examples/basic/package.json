@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "deploy": "gratis deploy --local",
     "preview": "gratis preview",
-    "pull": "gratis pull --endpoint http://localhost:4321"
+    "pull": "gratis pull --local"
   },
   "dependencies": {
     "astro": "^7.4.2",

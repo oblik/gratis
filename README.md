@@ -63,15 +63,15 @@ A Gratis site has no scheduled maintenance. If nobody touches it for ten years, 
 
 ## Try it locally
 
-No bucket needed: the preview serves the built demo site as if it were one.
+`examples/basic/` is an ordinary Astro site with Gratis added, just as your own project would be. No bucket needed: the folder `examples/basic/.gratis/bucket/` stands in for one.
 
 1. `pnpm install && pnpm build`
-2. `pnpm --filter example-basic preview`
-3. Open http://localhost:4321/admin/, log in as `admin` / `gratis-preview` and edit something
-4. In another terminal, `pnpm --filter example-basic pull` brings the edits into `examples/basic/src/data/`, as `gratis pull` would from a real bucket
-5. `git diff` shows what changed
+2. `pnpm --filter example-basic run deploy` builds the demo site and deploys it to the local bucket
+3. `pnpm --filter example-basic preview` serves the bucket. Open http://localhost:4321/admin/, log in as `admin` / `gratis-preview` and edit something
+4. `pnpm --filter example-basic pull` brings the edits into `examples/basic/src/data/`, and `git diff` shows them
+5. Change the demo in the repo and deploy again. Template changes go live, but content changes are replaced by the bucket's, since editors own the content once the site is live
 
-Running `pnpm build` again resets the preview to the repo's content.
+Delete `examples/basic/.gratis/bucket/` to start over.
 
 ---
 
