@@ -3,13 +3,9 @@ import { useState } from 'react'
 
 import { entryKey, isEntryId } from '../../core/bucket.ts'
 import { affectedBy } from '../../core/routes.ts'
+import { createEntry, deleteEntry, saveEntry } from '../../core/save.ts'
 import { emptyFields } from '../../core/schema.ts'
-import {
-  createEntry,
-  deleteEntry,
-  readEntry,
-  saveEntry,
-} from '../../core/site.ts'
+import { readEntry } from '../../core/site.ts'
 import { Button } from '../ui/Button.tsx'
 import { Dialog } from '../ui/Dialog.tsx'
 import { Status, type StatusMessage } from '../ui/Status.tsx'
@@ -32,7 +28,7 @@ export function CollectionEntry() {
     setConfirming(false)
     try {
       setMessage({ text: 'Deleting…' })
-      await deleteEntry(site, key, { DOMParser }, (path) =>
+      await deleteEntry(site, key, (path) =>
         setMessage({ text: `Rendered ${path}` }),
       )
       await navigate({
@@ -55,7 +51,7 @@ export function CollectionEntry() {
         collection={site.schema.collections[name]}
         entry={editRoute.useLoaderData()}
         save={(fields, etag, onPage) =>
-          saveEntry(site, key, fields, { DOMParser, etag }, onPage)
+          saveEntry(site, key, fields, { etag }, onPage)
         }
         reload={(fresh) => readEntry(site, key, { fresh })}
         actions={
@@ -120,7 +116,7 @@ export function NewEntry() {
       save={async (fields, _etag, onPage) => {
         if (!id || idError)
           throw new Error(idError ?? 'Give the entry an id first.')
-        return createEntry(site, name, id, fields, { DOMParser }, onPage)
+        return createEntry(site, name, id, fields, onPage)
       }}
       reload={(fresh) => readEntry(site, entryKey(name, id), { fresh })}
       // The saved draft is the entry's page now; nothing is left to discard.

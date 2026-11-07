@@ -1,7 +1,8 @@
 // The editor's session: the decrypted keys in sessionStorage, and the site loaded with them.
 
 import { decryptCredentials, type AuthBlob } from '../core/auth.ts'
-import { loadSite, renderPending, type Site } from '../core/site.ts'
+import { renderPending } from '../core/save.ts'
+import { loadSite, type Site } from '../core/site.ts'
 import {
   createCache,
   createStorage,
@@ -43,8 +44,10 @@ export function openSite(): Promise<Opened> | null {
   const current = session()
   if (!current) return null
   opened ??= (async () => {
-    const site = await loadSite(createCache(createStorage(current)))
-    return { site, finished: await renderPending(site, { DOMParser }) }
+    const site = await loadSite(createCache(createStorage(current)), {
+      DOMParser,
+    })
+    return { site, finished: await renderPending(site) }
   })()
   opened.catch(() => (opened = null))
   return opened

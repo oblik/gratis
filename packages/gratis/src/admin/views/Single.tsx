@@ -1,6 +1,7 @@
 import { getRouteApi, type ErrorComponentProps } from '@tanstack/react-router'
 
-import { readEntry, saveEntry } from '../../core/site.ts'
+import { saveEntry } from '../../core/save.ts'
+import { readEntry } from '../../core/site.ts'
 import { Status } from '../ui/Status.tsx'
 import { EntryForm } from './EntryForm.tsx'
 
@@ -16,7 +17,7 @@ export function Single() {
       collection={collection}
       entry={route.useLoaderData()}
       save={(fields, etag, onPage) =>
-        saveEntry(site, name, fields, { DOMParser, etag }, onPage)
+        saveEntry(site, name, fields, { etag }, onPage)
       }
       reload={(fresh) => readEntry(site, name, { fresh })}
     />

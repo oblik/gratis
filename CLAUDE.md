@@ -13,7 +13,8 @@ A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
     - `schema.ts` and `bucket.ts`: the shape of `schema.json`, and the bucket layout
     - `routes.ts`: `routes.json` and the pure questions about it: which pages a site or an entry has, which pages an edit re-renders
     - `template/`: `sentinels.ts` (the template language: formats and parses every sentinel and marker), `render.ts` (`render()`, pure and DOM-based) and `query.ts`
-    - `storage.ts` (the S3 client and object cache), `site.ts` (load and the save flow), `auth.ts`
+    - `site.ts` (loading the site), `plan.ts` (what an edit changes, as data, pure), `save.ts` (carrying out a plan: the save flow of notes/editing.md)
+    - `storage.ts` (the S3 client and object cache), `auth.ts`
   - `astro/`
     - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator over the repo files)
     - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state

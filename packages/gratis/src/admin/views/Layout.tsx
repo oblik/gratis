@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { renderAll } from '../../core/site.ts'
+import { renderAll } from '../../core/save.ts'
 import { isLocal, logOut } from '../session.ts'
 import { Button } from '../ui/Button.tsx'
 import { ExternalIcon } from '../ui/icons.tsx'
@@ -31,7 +31,7 @@ export function Layout() {
   async function rerender() {
     setBusy(true)
     try {
-      const pages = await renderAll(site, { DOMParser }, (path) =>
+      const pages = await renderAll(site, (path) =>
         setMessage({ text: `Rendered ${path}` }),
       )
       setMessage({ text: `Re-rendered ${pages.length} page(s).` })

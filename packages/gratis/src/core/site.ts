@@ -1,41 +1,31 @@
-// Loading the site and saving, creating and deleting entries, per notes/editing.md. No DOM UI
-// here: `DOMParser` is passed in so this runs in the browser and in Node alike. Every read and
-// write goes through the object cache, which holds the ETags the writes are conditional on.
+// A loaded site: schema.json, routes.json, the entry ids and every content file, read through the
+// object cache, which holds the ETags later writes are conditional on. Edits are plan.ts and
+// save.ts. `DOMParser` is passed in so this runs in the browser and in Node alike.
 
 import {
   collectionFolder,
   contentKey,
   entryIds,
   entryKey,
-  isEntryId,
-  json,
-  parseKey,
   ROUTES,
   SCHEMA,
-  templateKey,
 } from './bucket.ts'
-import { dependents, entryPages, ownPages, type Routes } from './routes.ts'
-import { changedFields, type Fields, type Schema } from './schema.ts'
+import type { SiteState } from './plan.ts'
+import type { Routes } from './routes.ts'
+import type { Fields, Schema } from './schema.ts'
 import type { Cache } from './storage.ts'
-import { render, type Content, type Dom } from './template/render.ts'
+import type { Content, Dom } from './template/render.ts'
 
-/** `entries` holds the ids of every collection that isn't a single, listed from the bucket. */
-export interface Site {
+export interface Site extends SiteState {
   objects: Cache
-  schema: Schema
-  routes: Routes
-  entries: Record<string, string[]>
+  /** What pages are rendered with. */
+  dom: Dom
 }
 export interface Entry {
   fields: Fields
   etag?: string
 }
-export type OnPage = (path: string) => void
-
-const HTML = 'text/html; charset=utf-8'
-const JSON_TYPE = 'application/json'
-
-async function required(objects: Cache, key: string, fresh = false) {
+export async function required(objects: Cache, key: string, fresh = false) {
   const object = await objects.get(key, { fresh })
   if (!object) throw new Error(`${key} is missing`)
   return object
@@ -47,7 +37,7 @@ const entryKeys = (site: Site) =>
     single ? [name] : site.entries[name].map((id) => entryKey(name, id)),
   )
 
-export async function loadSite(objects: Cache): Promise<Site> {
+export async function loadSite(objects: Cache, dom: Dom): Promise<Site> {
   const schema: Schema = JSON.parse((await required(objects, SCHEMA)).text)
   const routes: Routes = JSON.parse((await required(objects, ROUTES)).text)
   const entries: Record<string, string[]> = {}
@@ -59,7 +49,7 @@ export async function loadSite(objects: Cache): Promise<Site> {
         entries[name] = entryIds(folder, await objects.list(folder))
       }),
   )
-  const site = { objects, schema, routes, entries }
+  const site = { objects, dom, schema, routes, entries }
   await Promise.all(entryKeys(site).map((key) => objects.get(contentKey(key))))
   return site
 }
@@ -76,169 +66,9 @@ export async function readEntry(
   return { fields: file ? JSON.parse(file.text) : {}, etag: file?.etag }
 }
 
-async function readContent(site: Site): Promise<Content> {
+/** Every entry's fields, by entry key: what pages are rendered from. */
+export async function readContent(site: Site): Promise<Content> {
   const keys = entryKeys(site)
   const entries = await Promise.all(keys.map((key) => readEntry(site, key)))
   return Object.fromEntries(keys.map((key, i) => [key, entries[i].fields]))
 }
-
-/** Writes routes.json with `pending` queued, conditional on the version last read. */
-async function writeRoutes(site: Site, pending: string[]) {
-  await site.objects.put(ROUTES, json({ ...site.routes, _pending: pending }), {
-    type: JSON_TYPE,
-    ifMatch: site.objects.peek(ROUTES)?.etag,
-  })
-  site.routes._pending = pending
-}
-
-/** Renders and writes the given pages, recording their new dependencies in site.routes. */
-async function renderPages(
-  site: Site,
-  paths: string[],
-  { DOMParser }: Dom,
-  onPage?: OnPage,
-) {
-  const content = await readContent(site)
-  for (const path of paths) {
-    const page = site.routes.pages[path]
-    if (!page) continue // deleted since it was queued
-    const template = await required(site.objects, templateKey(page.template))
-    const { html, deps } = render(
-      template.text,
-      { content, entry: page.entry },
-      { DOMParser },
-    )
-    await site.objects.put(page.file, html, { type: HTML })
-    Object.assign(page, { deps, updated: new Date().toISOString() })
-    onPage?.(path)
-  }
-}
-
-/**
- * The save, in the order notes/editing.md gives: queue `paths` on top of any pending ones, write
- * the change, render the queue, clear it. Returns the pages rendered.
- */
-async function commit(
-  site: Site,
-  paths: string[],
-  write: () => Promise<void>,
-  dom: Dom,
-  onPage?: OnPage,
-) {
-  const pending = [...new Set([...site.routes._pending, ...paths])]
-  await writeRoutes(site, pending)
-  await write()
-  await renderPages(site, pending, dom, onPage)
-  await writeRoutes(site, [])
-  return pending
-}
-
-/**
- * Saves an entry's fields, then re-renders every page that depends on it. Content before HTML.
- * `etag` is the version the edit started from; it defaults to the cached one.
- */
-export function saveEntry(
-  site: Site,
-  key: string,
-  fields: Fields,
-  { DOMParser, etag }: Dom & { etag?: string },
-  onPage?: OnPage,
-) {
-  const file = contentKey(key)
-  const before: Fields = JSON.parse(site.objects.peek(file)?.text ?? '{}')
-  return commit(
-    site,
-    dependents(site.routes, key, changedFields(before, fields)),
-    () =>
-      site.objects
-        .put(file, json(fields), {
-          type: JSON_TYPE,
-          ifMatch: etag ?? site.objects.peek(file)?.etag,
-        })
-        .then(() => {}),
-    { DOMParser },
-    onPage,
-  )
-}
-
-/** Creates an entry with a page per route bound to its collection, and re-renders the pages that query it. */
-export async function createEntry(
-  site: Site,
-  collection: string,
-  id: string,
-  fields: Fields,
-  dom: Dom,
-  onPage?: OnPage,
-) {
-  if (!isEntryId(id))
-    throw new Error(
-      `"${id}" isn't a valid id: use lowercase letters, digits and dashes`,
-    )
-  const key = entryKey(collection, id)
-  const pages = entryPages(site.schema.routes, collection, id)
-  Object.assign(site.routes.pages, pages)
-  try {
-    return await commit(
-      site,
-      [...Object.keys(pages), ...dependents(site.routes, key)],
-      async () => {
-        // An existing entry of the same id fails the write instead of being overwritten.
-        await site.objects.put(contentKey(key), json(fields), {
-          type: JSON_TYPE,
-          ifNoneMatch: '*',
-        })
-        site.entries[collection] = [...site.entries[collection], id].sort()
-      },
-      dom,
-      onPage,
-    )
-  } catch (error) {
-    // The entry wasn't written (an existing id, a routes.json conflict): take its pages back out,
-    // from routes.json too if the queue was written.
-    if (!site.entries[collection].includes(id)) {
-      for (const path of Object.keys(pages)) delete site.routes.pages[path]
-      if (site.routes._pending.some((path) => path in pages))
-        await writeRoutes(
-          site,
-          site.routes._pending.filter((path) => !(path in pages)),
-        ).catch(() => {})
-    }
-    throw error
-  }
-}
-
-/** Deletes an entry and its pages, and re-renders the pages that read or query it. */
-export function deleteEntry(
-  site: Site,
-  key: string,
-  dom: Dom,
-  onPage?: OnPage,
-) {
-  const { collection, id } = parseKey(key)
-  const own = ownPages(site.routes, key)
-  const files = own.map((path) => site.routes.pages[path].file)
-  for (const path of own) delete site.routes.pages[path]
-  return commit(
-    site,
-    dependents(site.routes, key),
-    async () => {
-      await site.objects.delete(contentKey(key))
-      site.entries[collection] = site.entries[collection].filter(
-        (other) => other !== id,
-      )
-      for (const file of files) await site.objects.delete(file)
-    },
-    dom,
-    onPage,
-  )
-}
-
-/** Finishes an interrupted save: renders what the last one left queued, if anything. */
-export function renderPending(site: Site, dom: Dom, onPage?: OnPage) {
-  if (!site.routes._pending.length) return Promise.resolve([])
-  return commit(site, [], async () => {}, dom, onPage)
-}
-
-/** Regenerates every page, dependencies included (notes/editing.md). */
-export const renderAll = (site: Site, dom: Dom, onPage?: OnPage) =>
-  commit(site, Object.keys(site.routes.pages), async () => {}, dom, onPage)

@@ -4,6 +4,7 @@
 import { useBlocker } from '@tanstack/react-router'
 import { useState, type FormEvent, type ReactNode } from 'react'
 
+import type { OnPage } from '../../core/save.ts'
 import {
   equal,
   validate,
@@ -11,7 +12,7 @@ import {
   type Field,
   type Fields,
 } from '../../core/schema.ts'
-import type { Entry, OnPage } from '../../core/site.ts'
+import type { Entry } from '../../core/site.ts'
 import { ConflictError } from '../../core/storage.ts'
 import { Button } from '../ui/Button.tsx'
 import { Checkbox } from '../ui/Checkbox.tsx'

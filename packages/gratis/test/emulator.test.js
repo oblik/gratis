@@ -6,13 +6,8 @@ import { after, before, test } from 'node:test'
 
 import { JSDOM } from 'jsdom'
 
-import {
-  createEntry,
-  deleteEntry,
-  loadSite,
-  readEntry,
-  saveEntry,
-} from '../src/core/site.ts'
+import { createEntry, deleteEntry, saveEntry } from '../src/core/save.ts'
+import { loadSite, readEntry } from '../src/core/site.ts'
 import {
   ConflictError,
   createCache,
@@ -75,13 +70,14 @@ const open = () =>
         secretAccessKey: 'local',
       }),
     ),
+    { DOMParser },
   )
 const text = (key) => new TextDecoder().decode(backend.objects.get(key))
 
 test('a save writes the entry, re-renders its pages and clears the pending list', async () => {
   backend = bucket()
   const site = await open()
-  const pages = await saveEntry(site, 'site', { title: 'A & B' }, { DOMParser })
+  const pages = await saveEntry(site, 'site', { title: 'A & B' })
   assert.deepEqual(pages, ['/'])
   assert.deepEqual(JSON.parse(text('_gratis/content/site.json')), {
     title: 'A & B',
@@ -95,10 +91,10 @@ test('a save from a stale version conflicts and leaves the entry alone', async (
   const mine = await open()
   const theirs = await open()
   const { etag } = await readEntry(mine, 'site')
-  await saveEntry(theirs, 'site', { title: 'Theirs' }, { DOMParser })
+  await saveEntry(theirs, 'site', { title: 'Theirs' })
   // Mine is stale twice over: routes.json and the entry both changed.
   await assert.rejects(
-    saveEntry(mine, 'site', { title: 'Mine' }, { DOMParser, etag }),
+    saveEntry(mine, 'site', { title: 'Mine' }, { etag }),
     ConflictError,
   )
   assert.deepEqual(JSON.parse(text('_gratis/content/site.json')), {
@@ -213,13 +209,11 @@ test('ListObjectsV2 lists keys by prefix, and the site lists each collection fro
 test('creating an entry writes it, adds and renders its page and re-renders the pages that query it', async () => {
   backend = blog()
   const site = await open()
-  const pages = await createEntry(
-    site,
-    'posts',
-    'b',
-    { title: 'B', date: '2026-02-01', featured: true },
-    { DOMParser },
-  )
+  const pages = await createEntry(site, 'posts', 'b', {
+    title: 'B',
+    date: '2026-02-01',
+    featured: true,
+  })
   assert.deepEqual(pages.sort(), ['/', '/blog/b'])
   assert.deepEqual(JSON.parse(text('_gratis/content/posts/b.json')).title, 'B')
   assert.equal(
@@ -236,13 +230,7 @@ test('creating an entry writes it, adds and renders its page and re-renders the 
   assert.deepEqual(site.entries.posts, ['a', 'b'])
   // An existing id fails instead of overwriting, and leaves no page behind.
   await assert.rejects(
-    createEntry(
-      site,
-      'posts',
-      'a',
-      { title: 'X', date: '', featured: false },
-      { DOMParser },
-    ),
+    createEntry(site, 'posts', 'a', { title: 'X', date: '', featured: false }),
     ConflictError,
   )
   assert.equal(JSON.parse(text('_gratis/content/posts/a.json')).title, 'A')
@@ -264,32 +252,28 @@ test('a save re-renders a listing when it shows the entry or queries a field tha
     ),
   )
   const site = await open()
-  await createEntry(
-    site,
-    'posts',
-    'b',
-    { title: 'B', date: '2026-02-01', featured: false },
-    { DOMParser },
-  )
+  await createEntry(site, 'posts', 'b', {
+    title: 'B',
+    date: '2026-02-01',
+    featured: false,
+  })
   // The home page now shows only b, so a's featured flag matters to a's page alone...
   assert.deepEqual(
-    await saveEntry(
-      site,
-      'posts/a',
-      { title: 'A', date: '2026-01-01', featured: true },
-      { DOMParser },
-    ),
+    await saveEntry(site, 'posts/a', {
+      title: 'A',
+      date: '2026-01-01',
+      featured: true,
+    }),
     ['/blog/a'],
   )
   // ...but its date can put it on the home page.
   assert.deepEqual(
     (
-      await saveEntry(
-        site,
-        'posts/a',
-        { title: 'A', date: '2026-12-01', featured: true },
-        { DOMParser },
-      )
+      await saveEntry(site, 'posts/a', {
+        title: 'A',
+        date: '2026-12-01',
+        featured: true,
+      })
     ).sort(),
     ['/', '/blog/a'],
   )
@@ -302,14 +286,12 @@ test('a save re-renders a listing when it shows the entry or queries a field tha
 test('deleting an entry deletes its file and page and re-renders the pages that listed it', async () => {
   backend = blog()
   const site = await open()
-  await createEntry(
-    site,
-    'posts',
-    'b',
-    { title: 'B', date: '2026-02-01', featured: false },
-    { DOMParser },
-  )
-  assert.deepEqual(await deleteEntry(site, 'posts/a', { DOMParser }), ['/'])
+  await createEntry(site, 'posts', 'b', {
+    title: 'B',
+    date: '2026-02-01',
+    featured: false,
+  })
+  assert.deepEqual(await deleteEntry(site, 'posts/a'), ['/'])
   assert.equal(backend.objects.has('_gratis/content/posts/a.json'), false)
   assert.equal(backend.objects.has('blog/a/index.html'), false)
   assert.match(
