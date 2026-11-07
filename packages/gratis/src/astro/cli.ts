@@ -9,21 +9,20 @@
 // --endpoint <url> replaces --bucket with any path-style bucket URL, such as
 // a running `gratis preview` at http://localhost:4321. Credentials then
 // default to dummy ones, which only the emulator accepts.
-import { readdir, readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
 import { encryptCredentials } from '../core/auth.ts'
-import { AUTH, CONTENT } from '../core/bucket.ts'
+import { AUTH } from '../core/bucket.ts'
 import { createStorage, type Storage } from '../core/storage.ts'
 import {
-  contentType,
   createEmulator,
   folderBackend,
   type Backend,
 } from '../emulator/index.ts'
+import { upload } from './deploy.ts'
 import { pull } from './pull.ts'
 
 const {
@@ -74,50 +73,6 @@ function bucketStorage(): Storage {
   })
 }
 
-async function* files(dir: string): AsyncGenerator<string> {
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name)
-    if (entry.isDirectory()) yield* files(path)
-    else yield path
-  }
-}
-
-/**
- * Seeded on the first deploy and never replaced after: editors own them once
- * the site is live.
- */
-const SEEDED = [CONTENT]
-/** Never uploaded: editors create them. */
-const SKIPPED = [AUTH, 'uploads/']
-/** Content-hashed, so cacheable forever. */
-const IMMUTABLE = ['_astro/', 'admin/assets/']
-const under = (key: string, prefixes: string[]) =>
-  prefixes.some((prefix) => key.startsWith(prefix))
-
-async function upload(storage: Storage) {
-  let uploaded = 0
-  for await (const path of files(dist)) {
-    const key = relative(dist, path).split('\\').join('/')
-    if (under(key, SKIPPED)) continue
-    const seeded = under(key, SEEDED)
-    await storage
-      .put(key, await readFile(path), {
-        type: contentType(key),
-        cacheControl: under(key, IMMUTABLE)
-          ? 'public, max-age=31536000, immutable'
-          : 'no-cache',
-        ifNoneMatch: seeded ? '*' : undefined,
-      })
-      .then(
-        () => uploaded++,
-        (error) => {
-          if (!(seeded && error.name === 'ConflictError')) throw error
-        },
-      )
-  }
-  console.log(`uploaded ${uploaded} file(s) to ${args.bucket ?? args.endpoint}`)
-}
-
 /**
  * The built site as the bucket, on localhost (a secure context, so the admin's
  * WebCrypto works). Saves write into dist/, so a rebuild starts over from the
@@ -158,6 +113,9 @@ if (command === 'preview') {
   if (command === 'deploy') {
     const { build } = await import('astro')
     await build({ root })
-    await upload(storage)
+    const uploaded = await upload(storage, dist)
+    console.log(
+      `uploaded ${uploaded} file(s) to ${args.bucket ?? args.endpoint}`,
+    )
   }
 }
