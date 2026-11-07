@@ -5,21 +5,14 @@
 //
 // Credentials and region come from the environment: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
 // AWS_SESSION_TOKEN (optional) and AWS_REGION.
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
-import { dirname, join, relative } from 'node:path'
+import { join, relative } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
 import { encryptCredentials } from '../core/auth.ts'
-import {
-  AUTH,
-  collectionFolder,
-  CONTENT,
-  contentKey,
-  entryIds,
-  SCHEMA,
-} from '../core/bucket.ts'
-import { sourcePath, type Schema } from '../core/schema.ts'
+import { AUTH, CONTENT } from '../core/bucket.ts'
 import { createStorage, type Storage } from '../core/storage.ts'
 import {
   contentType,
@@ -27,6 +20,7 @@ import {
   folderBackend,
   type Backend,
 } from '../emulator/index.ts'
+import { pull } from './pull.ts'
 
 const {
   positionals: [command],
@@ -70,43 +64,6 @@ function bucketStorage(bucket: string): Storage {
     secretAccessKey,
     sessionToken,
   })
-}
-
-// A collection's folder is mirrored: entries deleted in the bucket are deleted in the repo too, or
-// the next deploy would seed them again.
-async function pull(storage: Storage) {
-  const schema = await storage.get(SCHEMA)
-  if (!schema)
-    return console.log('nothing to pull: the bucket has no schema.json yet')
-  for (const [name, collection] of Object.entries(
-    (JSON.parse(schema.text) as Schema).collections,
-  )) {
-    if (collection.single) {
-      const file = await storage.get(contentKey(name))
-      if (!file) continue
-      await mkdir(dirname(join(root, collection.source)), { recursive: true })
-      await writeFile(join(root, collection.source), file.text)
-      console.log(`pulled ${name} -> ${collection.source}`)
-      continue
-    }
-    const folder = collectionFolder(name)
-    const ids = entryIds(folder, await storage.list(folder))
-    const dir = join(root, collection.source)
-    await mkdir(dir, { recursive: true })
-    for (const id of ids) {
-      const file = await storage.get(contentKey(`${name}/${id}`))
-      await writeFile(join(root, sourcePath(collection, id)), file!.text)
-    }
-    for (const file of await readdir(dir))
-      if (
-        file.endsWith('.json') &&
-        !ids.includes(file.slice(0, -'.json'.length))
-      )
-        await rm(join(dir, file))
-    console.log(
-      `pulled ${name} (${ids.length} entries) -> ${collection.source}`,
-    )
-  }
 }
 
 async function* files(dir: string): AsyncGenerator<string> {
@@ -183,7 +140,7 @@ if (command === 'preview') {
   await preview()
 } else {
   const storage = bucketStorage(args.bucket!)
-  await pull(storage)
+  await pull(storage, pathToFileURL(join(root, '/')))
   if (command === 'deploy') {
     const { build } = await import('astro')
     await build({ root })

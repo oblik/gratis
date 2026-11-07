@@ -3,6 +3,14 @@
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 
+/** A file read that resolves to null when there is no such file. */
+export const orNull = <T>(read: Promise<T>) =>
+  read.catch((error: NodeJS.ErrnoException) =>
+    error.code === 'ENOENT' || error.code === 'EISDIR'
+      ? null
+      : Promise.reject(error),
+  )
+
 export interface Backend {
   read(key: string): Promise<Uint8Array | null>
   write(key: string, body: Uint8Array): Promise<void>
@@ -40,12 +48,7 @@ export function folderBackend(dir: string): Backend {
     return file
   }
   return {
-    read: (key) =>
-      readFile(path(key)).catch((error) =>
-        error.code === 'ENOENT' || error.code === 'EISDIR'
-          ? null
-          : Promise.reject(error),
-      ),
+    read: (key) => orNull(readFile(path(key))),
     async write(key, body) {
       await mkdir(dirname(path(key)), { recursive: true })
       await writeFile(path(key), body)

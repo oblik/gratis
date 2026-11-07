@@ -16,10 +16,11 @@ A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
     - `site.ts` (loading the site), `plan.ts` (what an edit changes, as data, pure), `save.ts` (carrying out a plan: the save flow of notes/editing.md)
     - `storage.ts` (the S3 client and object cache), `auth.ts`
   - `astro/`
-    - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator over the repo files)
+    - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator's backend in dev)
+    - `repo.ts`: the repo's content files under the bucket's content keys, the one mapping between the two layouts; the loaders, the build, dev and pull all go through it
     - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state
-    - the CLI: `deploy`, `pull`, `preview`
-  - `emulator/`: the S3 subset in three layers: `backends.ts` (bytes in memory or a folder; `astro/dev.ts` adds the repo files), `objects.ts` (ETags and conditional writes, and `emulatedStorage` for core in process), `http.ts` (the wire format and the website endpoint)
+    - the CLI (`cli.ts`): `deploy`, `pull` (`pull.ts`), `preview`
+  - `emulator/`: the S3 subset in three layers: `backends.ts` (bytes in memory or a folder; `astro/repo.ts` is the repo's), `objects.ts` (ETags and conditional writes, and `emulatedStorage` for core in process), `http.ts` (the wire format and the website endpoint)
   - `admin/`: the React SPA; `session.ts` holds the login, everything else is views
 - `examples/basic/`: the demo site
 - `scripts/`: setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit, the prototype of `gratis init`; they read credentials from the gitignored `.env`

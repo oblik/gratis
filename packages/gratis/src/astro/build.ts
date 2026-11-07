@@ -10,9 +10,9 @@ import type { AstroIntegrationLogger } from 'astro'
 import { JSDOM } from 'jsdom'
 
 import {
-  contentKey,
-  entryKey,
+  CONTENT,
   json,
+  parseKey,
   ROUTES,
   SCHEMA,
   templateId,
@@ -20,14 +20,10 @@ import {
   TEMPLATES,
 } from '../core/bucket.ts'
 import { listPages, type Routes } from '../core/routes.ts'
-import {
-  sourcePath,
-  type Collection,
-  type RouteBinding,
-  type Schema,
-} from '../core/schema.ts'
+import type { RouteBinding, Schema } from '../core/schema.ts'
 import { render, type Content } from '../core/template/render.ts'
-import { sourceIds } from './collection.ts'
+import { folderBackend } from '../emulator/index.ts'
+import { readContent, repoContent } from './repo.ts'
 import { PLACEHOLDER_ID, state } from './template.ts'
 
 export const adminDist = new URL('../../dist/admin/', import.meta.url)
@@ -86,20 +82,14 @@ async function writeTemplates(
   return bindings
 }
 
-/** Every entry's fields, and the repo file each came from. */
-async function readContent(root: URL, collections: Record<string, Collection>) {
-  const content: Content = {}
-  const sources: Record<string, URL> = {}
+/** The ids of each collection's entries in `content`. */
+function entryIds(content: Content) {
   const ids: Record<string, string[]> = {}
-  for (const [name, collection] of Object.entries(collections)) {
-    ids[name] = collection.single ? [] : await sourceIds(root, collection)
-    for (const id of collection.single ? [undefined] : ids[name]) {
-      const key = entryKey(name, id)
-      sources[key] = new URL(sourcePath(collection, id), root)
-      content[key] = JSON.parse(await readFile(sources[key], 'utf8'))
-    }
+  for (const key of Object.keys(content)) {
+    const { collection, id } = parseKey(key)
+    if (id != null) (ids[collection] ??= []).push(id)
   }
-  return { content, sources, ids }
+  return ids
 }
 
 /**
@@ -166,8 +156,16 @@ export async function finishBuild({
   const schema: Schema = { collections: state().collections, routes }
   await write(new URL(SCHEMA, dir), json(schema))
 
-  const { content, sources, ids } = await readContent(root, schema.collections)
-  const pages = await writeRoutes(dir, assets, schema, content, ids, logger)
+  const repo = repoContent(root, () => schema.collections)
+  const content = await readContent(repo)
+  const pages = await writeRoutes(
+    dir,
+    assets,
+    schema,
+    content,
+    entryIds(content),
+    logger,
+  )
 
   await access(adminDist).then(
     () => cp(adminDist, new URL('admin/', dir), { recursive: true }),
@@ -175,8 +173,9 @@ export async function finishBuild({
   )
 
   // The content files in the bucket layout, so dist/ is a complete site.
-  for (const [key, source] of Object.entries(sources))
-    await write(new URL(contentKey(key), dir), await readFile(source))
+  const files = folderBackend(fileURLToPath(dir))
+  for (const key of await repo.list(CONTENT))
+    await files.write(key, (await repo.read(key))!)
 
   logger.info(`${templateRoutes.size} template(s), ${pages} page(s)`)
 }

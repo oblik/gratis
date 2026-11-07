@@ -1,15 +1,16 @@
 // `defineCollection` and the loaders: Astro's own, except that they record where entries live, so
 // the admin can write them back, and in the template pass they hand out placeholders.
 
-import { readdir, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 import type { Loader } from 'astro/loaders'
 import { z } from 'astro/zod'
 
-import { sourcePath, type Collection } from '../core/schema.ts'
+import { parseKey } from '../core/bucket.ts'
+import type { Collection } from '../core/schema.ts'
 import { formatValue } from '../core/template/sentinels.ts'
 import { zodSchemas, type FieldConfig, type Shape } from './fields.ts'
+import { readContent, repoContent } from './repo.ts'
 import { isTemplateMode, state } from './template.ts'
 
 export const file = (path: string) => ({ kind: 'file' as const, path })
@@ -22,13 +23,6 @@ export function glob({ pattern, base }: { pattern: string; base: string }) {
 
 const readable = (key: string) =>
   key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
-
-/** The ids of a collection's entries: the JSON files in its folder. */
-export const sourceIds = async (root: URL, collection: Collection) =>
-  (await readdir(new URL(collection.source, root)).catch(() => []))
-    .filter((name) => name.endsWith('.json'))
-    .map((name) => name.slice(0, -'.json'.length))
-    .sort()
 
 export function defineCollection<F extends Record<string, FieldConfig>>({
   single = false,
@@ -79,29 +73,31 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
         state().collections[name] = collection
         const root = config.root
         const path = fileURLToPath(new URL(source, root))
+        const repo = repoContent(root, () => ({ [name]: collection }))
         const sync = async () => {
           store.clear()
-          if (single) {
-            const data = isTemplateMode()
-              ? Object.fromEntries(
-                  Object.keys(fields).map((field) => [
-                    field,
-                    formatValue({ scope: 'entry', key: name, field }),
-                  ]),
-                )
-              : JSON.parse(await readFile(path, 'utf8'))
-            store.set({ id: name, data: await parseData({ id: name, data }) })
-          } else if (!isTemplateMode()) {
-            // In template mode a collection stores nothing: getCollection returns its placeholder.
-            for (const id of await sourceIds(root, collection)) {
-              const data = JSON.parse(
-                await readFile(
-                  new URL(sourcePath(collection, id), root),
-                  'utf8',
-                ),
+          if (isTemplateMode()) {
+            // A single holds sentinels; a collection stores nothing, as getCollection returns its
+            // placeholder.
+            if (single) {
+              const data = Object.fromEntries(
+                Object.keys(fields).map((field) => [
+                  field,
+                  formatValue({ scope: 'entry', key: name, field }),
+                ]),
               )
-              store.set({ id, data: await parseData({ id, data }) })
+              store.set({ id: name, data: await parseData({ id: name, data }) })
             }
+            return
+          }
+          const content = await readContent(repo)
+          if (single && !content[name])
+            throw new Error(
+              `gratis: ${source}, the content of ${name}, is missing`,
+            )
+          for (const [key, data] of Object.entries(content)) {
+            const id = parseKey(key).id ?? name
+            store.set({ id, data: await parseData({ id, data }) })
           }
         }
         await sync()
