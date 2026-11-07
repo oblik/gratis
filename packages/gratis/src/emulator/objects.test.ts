@@ -1,43 +1,41 @@
 // The emulator's object layer: ETags and the conditional writes the save locks with.
 
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { expect, test } from 'vitest'
 
-import { ConflictError } from '../src/core/storage.ts'
-import { createObjects, memoryBackend } from '../src/emulator/index.ts'
+import { ConflictError } from '../core/storage.ts'
+import { createObjects, memoryBackend } from './index.ts'
 
-const bytes = (s) => new TextEncoder().encode(s)
+const bytes = (s: string) => new TextEncoder().encode(s)
 
 test('an ETag is the quoted MD5 of the bytes, as S3 gives it', async () => {
   const objects = createObjects(memoryBackend({ a: 'hello' }))
-  assert.equal(
-    (await objects.get('a')).etag,
+  expect((await objects.get('a'))?.etag).toBe(
     '"5d41402abc4b2a76b9719d911017c592"',
   )
-  assert.equal(await objects.get('missing'), null)
+  expect(await objects.get('missing')).toBe(null)
 })
 
 test('If-Match writes only over the version it names', async () => {
   const objects = createObjects(memoryBackend({ a: 'v1' }))
-  const { etag } = await objects.get('a')
+  const { etag } = (await objects.get('a'))!
   const next = await objects.put('a', bytes('v2'), { ifMatch: etag })
-  await assert.rejects(
+  await expect(
     objects.put('a', bytes('v3'), { ifMatch: etag }),
-    ConflictError,
-  )
-  await assert.rejects(
+  ).rejects.toThrow(ConflictError)
+  await expect(
     objects.put('missing', bytes('x'), { ifMatch: etag }),
-    ConflictError,
-  )
-  assert.deepEqual(await objects.get('a'), { body: bytes('v2'), etag: next })
+  ).rejects.toThrow(ConflictError)
+  expect(await objects.get('a')).toStrictEqual({
+    body: bytes('v2'),
+    etag: next,
+  })
 })
 
 test('If-None-Match: * writes only a new object', async () => {
   const objects = createObjects(memoryBackend({ a: 'v1' }))
-  await assert.rejects(
+  await expect(
     objects.put('a', bytes('v2'), { ifNoneMatch: '*' }),
-    ConflictError,
-  )
+  ).rejects.toThrow(ConflictError)
   await objects.put('b', bytes('new'), { ifNoneMatch: '*' })
-  assert.deepEqual(await objects.list(''), ['a', 'b'])
+  expect(await objects.list('')).toStrictEqual(['a', 'b'])
 })

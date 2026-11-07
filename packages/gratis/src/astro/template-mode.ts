@@ -65,9 +65,12 @@ const PLACEHOLDER_ID = /gratis-placeholder-([\w-]+)/
 const LIST = Symbol.for('gratis.list')
 
 /** getCollection's result: one placeholder entry, standing for the list `query` selects. */
-export function placeholderList(collection: string, query: Query): object[] {
+export function placeholderList(
+  collection: string,
+  query: Query,
+): Record<string, string>[] {
   const id = placeholderId(collection)
-  const entry = new Proxy(
+  const entry = new Proxy<Record<string, string>>(
     {},
     {
       get: (_, key) =>
@@ -94,7 +97,7 @@ const listOf = (value: unknown) =>
 const valueOf = (value: unknown): ValueRef | undefined =>
   typeof value === 'string' ? parseValue(value) : undefined
 
-const placeholderItem = new Proxy(
+const placeholderItem = new Proxy<Record<string, string>>(
   {},
   {
     get: (_, field) =>

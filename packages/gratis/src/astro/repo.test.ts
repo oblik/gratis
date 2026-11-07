@@ -1,15 +1,17 @@
 // The repo's content files under the bucket's content keys.
 
-import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, test } from 'node:test'
 import { pathToFileURL } from 'node:url'
 
-import { readContent, repoContent } from '../src/astro/repo.ts'
+import { afterEach, beforeEach, expect, test } from 'vitest'
 
-const collections = {
+import type { Collection } from '../core/schema.ts'
+import type { Backend } from '../emulator/index.ts'
+import { readContent, repoContent } from './repo.ts'
+
+const collections: Record<string, Collection> = {
   site: {
     single: true,
     label: 'Site',
@@ -23,10 +25,11 @@ const collections = {
     fields: {},
   },
 }
-const text = (bytes) => bytes && new TextDecoder().decode(bytes)
-const bytes = (s) => new TextEncoder().encode(s)
+const text = (bytes: Uint8Array | null) =>
+  bytes && new TextDecoder().decode(bytes)
+const bytes = (s: string) => new TextEncoder().encode(s)
 
-let dir, repo
+let dir: string, repo: Backend
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'gratis-repo-'))
   await mkdir(join(dir, 'src/data/posts'), { recursive: true })
@@ -38,15 +41,13 @@ beforeEach(async () => {
 afterEach(() => rm(dir, { recursive: true, force: true }))
 
 test('content keys read the files their collection points at', async () => {
-  assert.equal(
-    text(await repo.read('_gratis/content/site.json')),
+  expect(text(await repo.read('_gratis/content/site.json'))).toBe(
     '{"title":"Blog"}',
   )
-  assert.equal(
-    text(await repo.read('_gratis/content/posts/a.json')),
+  expect(text(await repo.read('_gratis/content/posts/a.json'))).toBe(
     '{"title":"A"}',
   )
-  assert.equal(await repo.read('_gratis/content/posts/b.json'), null)
+  expect(await repo.read('_gratis/content/posts/b.json')).toBe(null)
 })
 
 test('anything that is not an entry of a known collection reads as missing', async () => {
@@ -58,39 +59,37 @@ test('anything that is not an entry of a known collection reads as missing', asy
     '_gratis/content/site/a.json',
     '_gratis/content/posts/../../../secret.json',
   ])
-    assert.equal(await repo.read(key), null, key)
-  await assert.rejects(
+    expect(await repo.read(key), key).toBe(null)
+  await expect(
     repo.write('_gratis/content/posts/../../x.json', bytes('{}')),
-    /isn't an entry's content file/,
-  )
+  ).rejects.toThrow(/isn't an entry's content file/)
 })
 
 test('writes create the folder, and removes delete the file', async () => {
   await rm(join(dir, 'src/data/posts'), { recursive: true })
   await repo.write('_gratis/content/posts/b.json', bytes('{"title":"B"}'))
-  assert.equal(
-    await readFile(join(dir, 'src/data/posts/b.json'), 'utf8'),
+  expect(await readFile(join(dir, 'src/data/posts/b.json'), 'utf8')).toBe(
     '{"title":"B"}',
   )
   await repo.remove('_gratis/content/posts/b.json')
-  assert.equal(await repo.read('_gratis/content/posts/b.json'), null)
+  expect(await repo.read('_gratis/content/posts/b.json')).toBe(null)
 })
 
 test("a listing has the singles and each collection's JSON files, by prefix", async () => {
-  assert.deepEqual(await repo.list('_gratis/content/'), [
+  expect(await repo.list('_gratis/content/')).toStrictEqual([
     '_gratis/content/posts/a.json',
     '_gratis/content/site.json',
   ])
-  assert.deepEqual(await repo.list('_gratis/content/posts/'), [
+  expect(await repo.list('_gratis/content/posts/')).toStrictEqual([
     '_gratis/content/posts/a.json',
   ])
-  assert.deepEqual(await repo.list('admin/'), [])
+  expect(await repo.list('admin/')).toStrictEqual([])
   await rm(join(dir, 'src/data'), { recursive: true })
-  assert.deepEqual(await repo.list(''), [])
+  expect(await repo.list('')).toStrictEqual([])
 })
 
 test('readContent parses every entry by its entry key', async () => {
-  assert.deepEqual(await readContent(repo), {
+  expect(await readContent(repo)).toStrictEqual({
     'posts/a': { title: 'A' },
     site: { title: 'Blog' },
   })

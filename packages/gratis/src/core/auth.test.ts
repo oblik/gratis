@@ -1,7 +1,6 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { expect, test } from 'vitest'
 
-import { decryptCredentials, encryptCredentials } from '../src/core/auth.ts'
+import { decryptCredentials, encryptCredentials } from './auth.ts'
 
 const keys = {
   accessKeyId: 'AKIDEXAMPLE',
@@ -14,22 +13,22 @@ const storage = {
 
 test('round-trips with the right password', async () => {
   const blob = await encryptCredentials(keys, 'correct horse battery', storage)
-  assert.deepEqual(blob.storage, storage)
-  assert.ok(!JSON.stringify(blob).includes(keys.secretAccessKey))
-  assert.deepEqual(
-    await decryptCredentials(blob, 'correct horse battery'),
+  expect(blob.storage).toStrictEqual(storage)
+  expect(!JSON.stringify(blob).includes(keys.secretAccessKey)).toBeTruthy()
+  expect(await decryptCredentials(blob, 'correct horse battery')).toStrictEqual(
     keys,
   )
 })
 
 test('fails with the wrong password', async () => {
   const blob = await encryptCredentials(keys, 'correct horse battery', storage)
-  await assert.rejects(decryptCredentials(blob, 'wrong horse battery'))
+  await expect(
+    decryptCredentials(blob, 'wrong horse battery'),
+  ).rejects.toThrow()
 })
 
 test('refuses short passwords', async () => {
-  await assert.rejects(
-    encryptCredentials(keys, 'short', storage),
+  await expect(encryptCredentials(keys, 'short', storage)).rejects.toThrow(
     /at least 12/,
   )
 })

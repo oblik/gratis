@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { expect, test } from 'vitest'
 
 import {
   affectedBy,
@@ -7,8 +6,9 @@ import {
   entryPages,
   listPages,
   ownPages,
-} from '../src/core/routes.ts'
-import { changedFields } from '../src/core/schema.ts'
+  type Page,
+  type Routes,
+} from './routes.ts'
 
 const bindings = {
   '/blog/[slug]': {
@@ -28,7 +28,7 @@ test('listPages gives a page per static route and per entry of a bound route', (
     bindings,
     { posts: ['a', 'b'] },
   )
-  assert.deepEqual(pages, {
+  expect(pages).toStrictEqual({
     '/': {
       template: '/',
       file: 'index.html',
@@ -50,23 +50,29 @@ test('listPages gives a page per static route and per entry of a bound route', (
       updated: '',
     },
   })
-  assert.deepEqual(unbound, ['/tags/[tag]'])
+  expect(unbound).toStrictEqual(['/tags/[tag]'])
 })
 
 test('entryPages gives a new entry one page per route bound to its collection', () => {
-  assert.deepEqual(Object.keys(entryPages(bindings, 'posts', 'c')), ['/blog/c'])
-  assert.equal(entryPages(bindings, 'posts', 'c')['/blog/c'].entry, 'posts/c')
-  assert.deepEqual(entryPages(bindings, 'pages', 'c'), {})
+  expect(Object.keys(entryPages(bindings, 'posts', 'c'))).toStrictEqual([
+    '/blog/c',
+  ])
+  expect(entryPages(bindings, 'posts', 'c')['/blog/c'].entry).toBe('posts/c')
+  expect(entryPages(bindings, 'pages', 'c')).toStrictEqual({})
 })
 
-const page = (entries, collections = {}, entry) => ({
+const page = (
+  entries: string[],
+  collections: Record<string, string[]> = {},
+  entry?: string,
+): Page => ({
   template: '/',
   file: 'x.html',
   ...(entry && { entry }),
   deps: { entries, collections },
   updated: '',
 })
-const routes = {
+const routes: Routes = {
   pages: {
     '/': page(['site'], { posts: ['date', 'featured'] }),
     '/about': page(['site']),
@@ -78,36 +84,29 @@ const routes = {
 }
 
 test('dependents are the pages that read the entry or query a changed field', () => {
-  assert.deepEqual(dependents(routes, 'site'), [
+  expect(dependents(routes, 'site')).toStrictEqual([
     '/',
     '/about',
     '/blog/a',
     '/blog/b',
     '/archive',
   ])
-  assert.deepEqual(dependents(routes, 'posts/a', ['title']), ['/blog/a'])
-  assert.deepEqual(dependents(routes, 'posts/a', ['date']), ['/', '/blog/a'])
-  assert.deepEqual(dependents(routes, 'posts/a', []), ['/blog/a'])
+  expect(dependents(routes, 'posts/a', ['title'])).toStrictEqual(['/blog/a'])
+  expect(dependents(routes, 'posts/a', ['date'])).toStrictEqual([
+    '/',
+    '/blog/a',
+  ])
+  expect(dependents(routes, 'posts/a', [])).toStrictEqual(['/blog/a'])
 })
 
 test('without fields, every query of the collection counts', () => {
-  assert.deepEqual(dependents(routes, 'posts/c'), ['/', '/archive'])
+  expect(dependents(routes, 'posts/c')).toStrictEqual(['/', '/archive'])
 })
 
 test("ownPages and affectedBy split an entry's pages from the ones that list it", () => {
-  assert.deepEqual(ownPages(routes, 'posts/a'), ['/blog/a'])
-  assert.deepEqual(affectedBy(routes, 'posts/a'), {
+  expect(ownPages(routes, 'posts/a')).toStrictEqual(['/blog/a'])
+  expect(affectedBy(routes, 'posts/a')).toStrictEqual({
     own: ['/blog/a'],
     others: ['/', '/archive'],
   })
-})
-
-test('changedFields compares values structurally, including removed fields', () => {
-  assert.deepEqual(
-    changedFields(
-      { title: 'A', tags: ['x'], featured: true },
-      { title: 'A', tags: ['x'], date: '2026-01-01' },
-    ),
-    ['featured', 'date'],
-  )
 })

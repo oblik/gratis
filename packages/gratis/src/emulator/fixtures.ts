@@ -1,8 +1,8 @@
 // Buckets for tests: a backend with a built site in it, as `astro build` would leave in dist/.
 
-import { memoryBackend } from '../src/emulator/index.ts'
+import { memoryBackend } from './index.ts'
 
-export const json = (value) => JSON.stringify(value, null, 2) + '\n'
+export const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n'
 
 // A single page showing the site's title.
 export const bucket = () =>

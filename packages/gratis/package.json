@@ -29,16 +29,19 @@
     "react-dom": "^19.3.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "vitest run",
     "typecheck": "tsc",
     "build": "tsc && vite build --config vite.admin.config.js"
   },
   "files": [
     "src",
-    "dist"
+    "dist",
+    "!src/**/*.test.ts",
+    "!src/emulator/fixtures.ts"
   ],
   "bin": {
     "gratis": "./src/astro/cli.ts"

@@ -1,6 +1,5 @@
 // Pulling the bucket's content into the repo, against a bucket in memory.
 
-import assert from 'node:assert/strict'
 import {
   mkdir,
   mkdtemp,
@@ -11,12 +10,13 @@ import {
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
 import { pathToFileURL } from 'node:url'
 
-import { pull } from '../src/astro/pull.ts'
-import { emulatedStorage } from '../src/emulator/index.ts'
-import { blog, json } from './fixtures.js'
+import { expect, test } from 'vitest'
+
+import { blog, json } from '../emulator/fixtures.ts'
+import { emulatedStorage, memoryBackend } from '../emulator/index.ts'
+import { pull } from './pull.ts'
 
 test('pull mirrors each collection, copies singles, and leaves a single missing from the bucket alone', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'gratis-pull-'))
@@ -30,28 +30,26 @@ test('pull mirrors each collection, copies singles, and leaves a single missing 
       '_gratis/content/posts/b.json',
       new TextEncoder().encode(json({ title: 'B' })),
     )
-    const log = []
+    const log: string[] = []
     await pull(emulatedStorage(bucket), pathToFileURL(dir + '/'), (m) =>
       log.push(m),
     )
-    assert.deepEqual((await readdir(join(dir, 'src/data/posts'))).sort(), [
+    expect((await readdir(join(dir, 'src/data/posts'))).sort()).toStrictEqual([
       'a.json',
       'b.json',
       'notes.txt',
     ])
-    assert.deepEqual(
+    expect(
       JSON.parse(await readFile(join(dir, 'src/data/site.json'), 'utf8')),
-      { title: 'Blog' },
-    )
-    assert.deepEqual(log, [
+    ).toStrictEqual({ title: 'Blog' })
+    expect(log).toStrictEqual([
       'pulled site -> src/data/site.json',
       'pulled posts (2 entries) -> src/data/posts/',
     ])
 
     bucket.objects.delete('_gratis/content/site.json')
     await pull(emulatedStorage(bucket), pathToFileURL(dir + '/'), () => {})
-    assert.match(
-      await readFile(join(dir, 'src/data/site.json'), 'utf8'),
+    expect(await readFile(join(dir, 'src/data/site.json'), 'utf8')).toMatch(
       /Blog/,
     )
   } finally {
@@ -60,12 +58,13 @@ test('pull mirrors each collection, copies singles, and leaves a single missing 
 })
 
 test('pull does nothing for a bucket that was never deployed', async () => {
-  const log = []
-  const { memoryBackend } = await import('../src/emulator/index.ts')
+  const log: string[] = []
   await pull(
     emulatedStorage(memoryBackend()),
     new URL('file:///nowhere/'),
     (m) => log.push(m),
   )
-  assert.deepEqual(log, ['nothing to pull: the bucket has no schema.json yet'])
+  expect(log).toStrictEqual([
+    'nothing to pull: the bucket has no schema.json yet',
+  ])
 })
