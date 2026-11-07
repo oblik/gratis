@@ -1,16 +1,19 @@
 ---
-import { markerOf } from './template.ts'
+import { formatMarker } from '../core/template/sentinels.ts'
+import { listOf, valueOf } from './template.ts'
 
-// In template mode `when` is a sentinel; the marker carries its scope and field.
+// In template mode `when` is a sentinel, which the marker carries.
 const { when } = Astro.props
-const ref = markerOf(when)
+const value = valueOf(when)
+if (listOf(when))
+  throw new Error('gratis: <If> over a list is not supported yet; use a field')
 ---
 
-{ref ? (
+{value ? (
   <>
-    <Fragment set:html={`<!--gratis:if ${ref}-->`} />
+    <Fragment set:html={formatMarker({ kind: 'if', value })} />
     <slot />
-    <Fragment set:html="<!--/gratis:if-->" />
+    <Fragment set:html={formatMarker({ kind: 'end', of: 'if' })} />
   </>
 ) : when ? (
   <slot />

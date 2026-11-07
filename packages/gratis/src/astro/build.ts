@@ -20,13 +20,13 @@ import {
   TEMPLATES,
   type Page,
 } from '../core/bucket.ts'
-import { render, type Content } from '../core/render.ts'
 import {
   sourcePath,
   type Collection,
   type RouteBinding,
   type Schema,
 } from '../core/schema.ts'
+import { render, type Content } from '../core/template/render.ts'
 import { sourceIds } from './collection.ts'
 import { PLACEHOLDER_ID, state } from './template.ts'
 

@@ -16,9 +16,9 @@ import {
   type Page,
   type Routes,
 } from './bucket.ts'
-import { render, type Content, type Dom } from './render.ts'
 import { equal, type Fields, type Schema } from './schema.ts'
 import type { Cache } from './storage.ts'
+import { render, type Content, type Dom } from './template/render.ts'
 
 /** `entries` holds the ids of every collection that isn't a single, listed from the bucket. */
 export interface Site {

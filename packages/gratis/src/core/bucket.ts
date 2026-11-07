@@ -3,7 +3,7 @@
 // An entry is named by its key: `site` for a single, `posts/hello` for entry `hello` of `posts`.
 // Its file in the bucket is the key under `_gratis/content/` plus `.json`.
 
-import type { Deps } from './render.ts'
+import type { Deps } from './template/render.ts'
 
 export const SCHEMA = '_gratis/schema.json'
 export const ROUTES = '_gratis/routes.json'

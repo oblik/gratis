@@ -1,23 +1,30 @@
 ---
-import { markerOf, sentinel } from './template.ts'
+import { formatMarker, formatValue } from '../core/template/sentinels.ts'
+import { listOf, valueOf } from './template.ts'
 
 // In template mode `of` is a query and the slot renders one placeholder item between the markers;
 // in real mode it runs once per item.
 const { of } = Astro.props
-const ref = markerOf(of)
+const list = listOf(of)
+if (!list && valueOf(of))
+  throw new Error(
+    'gratis: <Each> over a field is not supported yet; list a collection with getCollection',
+  )
 const placeholder = new Proxy(
   {},
   {
-    get: (_, key) =>
-      typeof key === 'string' ? sentinel('item', key) : undefined,
+    get: (_, field) =>
+      typeof field === 'string'
+        ? formatValue({ scope: 'item', field })
+        : undefined,
   },
 )
-const items = ref ? [placeholder] : (of ?? [])
+const items = list ? [placeholder] : (of ?? [])
 const rendered = await Promise.all(
   items.map((item) => Astro.slots.render('default', [item])),
 )
 ---
 
-{ref && <Fragment set:html={`<!--gratis:each ${ref}-->`} />}
+{list && <Fragment set:html={formatMarker({ kind: 'each', list })} />}
 <Fragment set:html={rendered.join('')} />
-{ref && <Fragment set:html="<!--/gratis:each-->" />}
+{list && <Fragment set:html={formatMarker({ kind: 'end', of: 'each' })} />}

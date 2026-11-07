@@ -11,11 +11,11 @@ A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
 - `packages/gratis/src/`
   - `core/`: framework-free, runs in the browser and in Node; `astro/` and `admin/` import it and it imports neither
     - `schema.ts` and `bucket.ts`: the shapes of `schema.json` and `routes.json`, and the bucket layout
-    - `render.ts` and `query.ts`: `render()`, pure and DOM-based
+    - `template/`: `sentinels.ts` (the template language: formats and parses every sentinel and marker), `render.ts` (`render()`, pure and DOM-based) and `query.ts`
     - `storage.ts` (the S3 client and object cache), `site.ts` (load and the save flow), `auth.ts`
   - `astro/`
     - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator over the repo files)
-    - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state and sentinels
+    - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state
     - the CLI: `deploy`, `pull`, `preview`
   - `emulator/`: the S3 subset over HTTP, with folder, loader-files and in-memory backends
   - `admin/`: the React SPA; `session.ts` holds the login, everything else is views

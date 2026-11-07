@@ -3,7 +3,7 @@ import { test } from 'node:test'
 
 import { JSDOM } from 'jsdom'
 
-import { render } from '../src/core/render.ts'
+import { render } from '../src/core/template/render.ts'
 
 const { DOMParser } = new JSDOM('').window
 const template =

@@ -11,8 +11,9 @@ import {
   type CollectionKey,
 } from 'astro:content'
 
-import { runQuery, type Query } from '../core/query.ts'
-import { isTemplateMode, MARKER, placeholderId, sentinel } from './template.ts'
+import { runQuery, type Query } from '../core/template/query.ts'
+import { formatValue, type ListRef } from '../core/template/sentinels.ts'
+import { isTemplateMode, LIST, placeholderId } from './template.ts'
 
 type Entry<C extends CollectionKey> = {
   id: string
@@ -51,14 +52,12 @@ export async function getCollection<C extends CollectionKey>(
             : key === 'collection'
               ? collection
               : typeof key === 'string'
-                ? sentinel('route', key)
+                ? formatValue({ scope: 'route', field: key })
                 : undefined,
       },
     )
-    const json = Object.keys(query).length ? ` ${JSON.stringify(query)}` : ''
-    return Object.assign([entry], {
-      [MARKER]: `query:${collection}${json}`,
-    }) as Entry<C>[]
+    const list: ListRef = { collection: String(collection), query }
+    return Object.assign([entry], { [LIST]: list }) as Entry<C>[]
   }
   const entries = (await astroGetCollection(collection)).map(
     (entry: { id: string; data: unknown }) => ({

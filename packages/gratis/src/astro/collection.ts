@@ -8,8 +8,9 @@ import type { Loader } from 'astro/loaders'
 import { z } from 'astro/zod'
 
 import { sourcePath, type Collection } from '../core/schema.ts'
+import { formatValue } from '../core/template/sentinels.ts'
 import { zodSchemas, type FieldConfig, type Shape } from './fields.ts'
-import { isTemplateMode, sentinel, state } from './template.ts'
+import { isTemplateMode, state } from './template.ts'
 
 export const file = (path: string) => ({ kind: 'file' as const, path })
 
@@ -83,9 +84,9 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
           if (single) {
             const data = isTemplateMode()
               ? Object.fromEntries(
-                  Object.keys(fields).map((k) => [
-                    k,
-                    sentinel('entry', name, k),
+                  Object.keys(fields).map((field) => [
+                    field,
+                    formatValue({ scope: 'entry', key: name, field }),
                   ]),
                 )
               : JSON.parse(await readFile(path, 'utf8'))

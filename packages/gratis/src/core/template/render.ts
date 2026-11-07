@@ -1,12 +1,21 @@
 // render(template, { content, entry }, { DOMParser }) -> { html, deps }
 //
 // Pure: the same template and content give the same bytes in the browser and in Node, as long as
-// DOMParser is the browser's own or jsdom's (see notes/rendering.md).
+// DOMParser is the browser's own or jsdom's (see notes/rendering.md). The template language itself
+// is in sentinels.ts; this is only the DOM walk.
 // `content` maps an entry key (`site` for a single, `posts/hello` for an entry) to its fields.
 // `entry` is the key of the page's own entry, which `route` sentinels read.
 
-import { entryKey, parseKey } from './bucket.ts'
-import { queryFields, runQuery, type Query, type QueryEntry } from './query.ts'
+import { entryKey, parseKey } from '../bucket.ts'
+import { queryFields, runQuery, type QueryEntry } from './query.ts'
+import {
+  formatValue,
+  hasValues,
+  parseMarker,
+  replaceValues,
+  type Marker,
+  type ValueRef,
+} from './sentinels.ts'
 
 export type Content = Record<string, Record<string, unknown>>
 export interface Deps {
@@ -17,7 +26,6 @@ export interface Dom {
   DOMParser: new () => DOMParser
 }
 
-const SENTINEL = /\{\{gratis:([^}]+)\}\}/g
 const SHOW_ELEMENT = 0x1,
   SHOW_TEXT = 0x4,
   SHOW_COMMENT = 0x80
@@ -42,57 +50,50 @@ export function render(
   const entries = new Set<string>(entry ? [entry] : [])
   const collections: Record<string, Set<string>> = {}
 
-  // A value by its sentinel ref: `entry:site:title`, `route:title`, `item:title` (with `item`).
-  const read = (ref: string, item?: string): unknown => {
-    const [scope, ...rest] = ref.split(':')
-    let key: string, field: string
-    if (scope === 'entry') [key, field] = rest
-    else if (scope === 'route') {
+  // A value, with `item` the key of the current `each` item.
+  const read = (ref: ValueRef, item?: string): unknown => {
+    let key: string
+    if (ref.scope === 'entry') key = ref.key
+    else if (ref.scope === 'route') {
       if (!entry)
         throw new Error(
-          `gratis: {{gratis:${ref}}} on a page with no entry of its own`,
+          `gratis: ${formatValue(ref)} on a page with no entry of its own`,
         )
-      ;[key, field] = [entry, rest[0]]
-    } else if (scope === 'item') {
-      if (!item) throw new Error(`gratis: {{gratis:${ref}}} outside an each`)
-      ;[key, field] = [item, rest[0]]
-    } else
-      throw new Error(
-        `gratis: unsupported sentinel scope "${scope}" in {{gratis:${ref}}}`,
-      )
+      key = entry
+    } else {
+      if (!item) throw new Error(`gratis: ${formatValue(ref)} outside an each`)
+      key = item
+    }
     entries.add(key)
-    if (field === 'id') return parseKey(key).id
-    return content[key]?.[field]
+    if (ref.field === 'id') return parseKey(key).id
+    return content[key]?.[ref.field]
   }
   const text = (value: unknown) => (value == null ? '' : String(value))
 
-  // Comment markers under `root`, in document order.
-  const markers = (root: Node, kind: string) => {
-    const found: Comment[] = []
+  // The start markers of `kind` under `root`, in document order.
+  const starts = <K extends 'if' | 'each'>(root: Node, kind: K) => {
+    const found: { start: Comment; marker: Extract<Marker, { kind: K }> }[] = []
     const walker = doc.createTreeWalker(root, SHOW_COMMENT)
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const data = (node as Comment).data
-      if (data.startsWith(`gratis:${kind} `) || data === `/gratis:${kind}`)
-        found.push(node as Comment)
-      else if (
-        /^\/?gratis:/.test(data) &&
-        !/^\/?gratis:(each|if)( |$)/.test(data)
-      )
-        throw new Error(`gratis: unknown marker <!--${data}-->`)
+      const marker = parseMarker((node as Comment).data)
+      if (marker?.kind === kind)
+        found.push({
+          start: node as Comment,
+          marker: marker as Extract<Marker, { kind: K }>,
+        })
     }
     return found
   }
   // The siblings between a start marker and its end, counting nested pairs of the same kind.
-  const between = (start: Comment, kind: string) => {
+  const between = (start: Comment, kind: 'if' | 'each') => {
     const nodes: Node[] = []
     let depth = 0
     for (let node = start.nextSibling; node; node = node.nextSibling) {
       if (node.nodeType === 8) {
-        const data = (node as Comment).data
-        if (data.startsWith(`gratis:${kind} `)) depth++
-        else if (data === `/gratis:${kind}`) {
-          if (!depth--) return { nodes, end: node as Comment }
-        }
+        const marker = parseMarker((node as Comment).data)
+        if (marker?.kind === kind) depth++
+        else if (marker?.kind === 'end' && marker.of === kind && !depth--)
+          return { nodes, end: node as Comment }
       }
       nodes.push(node)
     }
@@ -101,20 +102,20 @@ export function render(
 
   // Removes the content of falsy `if`s and every `if` marker under `root`.
   const conditionals = (root: Node, item?: string) => {
-    for (const start of markers(root, 'if')) {
-      if (!start.parentNode || start.data.startsWith('/')) continue
+    for (const { start, marker } of starts(root, 'if')) {
+      if (!start.parentNode) continue
       const { nodes, end } = between(start, 'if')
-      if (!read(start.data.slice('gratis:if '.length), item))
+      if (!read(marker.value, item))
         for (const node of nodes) node.parentNode?.removeChild(node)
       start.remove()
       end.remove()
     }
   }
 
-  // Fills every sentinel in text and attributes under `root`, in one pass so values are never re-read.
+  // Fills every sentinel in text and attributes under `root`.
   const fill = (root: Node, item?: string) => {
     const replace = (s: string) =>
-      s.replace(SENTINEL, (_, ref: string) => text(read(ref, item)))
+      replaceValues(s, (ref) => text(read(ref, item)))
     const walker = doc.createTreeWalker(root, SHOW_ELEMENT | SHOW_TEXT)
     for (
       let node: Node | null = walker.currentNode;
@@ -123,46 +124,38 @@ export function render(
     ) {
       if (node.nodeType === 1) {
         for (const attr of (node as Element).attributes)
-          if (attr.value.includes('{{gratis:')) attr.value = replace(attr.value)
+          if (hasValues(attr.value)) attr.value = replace(attr.value)
       } else if (node.nodeType === 3) {
         const parent = node.parentNode?.nodeName
         if (parent === 'SCRIPT' || parent === 'STYLE') continue
-        if ((node as Text).data.includes('{{gratis:'))
+        if (hasValues((node as Text).data))
           (node as Text).data = replace((node as Text).data)
       }
     }
   }
 
   // 1. Lift each item template out of the page, so the page's own pass never sees item sentinels.
-  const lists = markers(doc, 'each')
-    .filter((m) => !m.data.startsWith('/'))
-    .map((start) => {
-      const { nodes, end } = between(start, 'each')
-      const item = doc.createDocumentFragment()
-      item.append(...nodes)
-      start.remove()
-      return { ref: start.data.slice('gratis:each '.length), item, end }
-    })
+  const lists = starts(doc, 'each').map(({ start, marker }) => {
+    const { nodes, end } = between(start, 'each')
+    const item = doc.createDocumentFragment()
+    item.append(...nodes)
+    start.remove()
+    return { list: marker.list, item, end }
+  })
 
   // 2. The page itself.
   conditionals(doc)
   fill(doc.documentElement)
 
   // 3. One clone of the item template per item, in place of the end marker.
-  for (const { ref, item, end } of lists) {
+  for (const { list, item, end } of lists) {
     if (!end.parentNode) continue // inside an `if` that was false
-    const match = ref.match(/^query:([^ ]+)(?: (.*))?$/)
-    if (!match)
-      throw new Error(
-        `gratis: <!--gratis:each ${ref}--> lists other than queries are not supported yet`,
-      )
-    const [, collection, query] = match
-    const parsed: Query = query ? JSON.parse(query) : {}
+    const { collection, query } = list
     collections[collection] ??= new Set()
-    for (const field of queryFields(parsed)) collections[collection].add(field)
+    for (const field of queryFields(query)) collections[collection].add(field)
     for (const { id } of runQuery(
       collectionEntries(content, collection),
-      parsed,
+      query,
     )) {
       const key = entryKey(collection, id)
       entries.add(key)
