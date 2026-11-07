@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 import { json, parseContentKey, ROUTES, SCHEMA } from '../core/bucket.ts'
-import type { Routes } from '../core/routes.ts'
+import { routesJson, type Routes } from '../core/routes.ts'
 import type { Schema } from '../core/schema.ts'
 import { memoryBackend, orNull, type Backend } from '../emulator/index.ts'
 import { repoContent } from './repo.ts'
@@ -30,7 +30,7 @@ export function devBackend({
 }): Backend {
   // No pages, so a save writes only the entry.
   const routes: Routes = { pages: {}, _pending: [] }
-  const memory = memoryBackend({ [ROUTES]: json(routes) })
+  const memory = memoryBackend({ [ROUTES]: routesJson(routes) })
   const content = repoContent(root, () => state().collections)
   const schema = (): Schema => ({
     collections: state().collections,

@@ -15,7 +15,7 @@ import {
   templateKey,
   TEMPLATES,
 } from '../core/bucket.ts'
-import { listPages, type Routes } from '../core/routes.ts'
+import { listPages, routesJson, type Routes } from '../core/routes.ts'
 import type { RouteBinding, Schema } from '../core/schema.ts'
 import { render, type Content } from '../core/template/render.ts'
 import { folderBackend } from '../emulator/index.ts'
@@ -120,7 +120,7 @@ async function writeRoutes(
     Object.assign(page, { deps, updated })
   }
   const routes: Routes = { pages, _pending: [] }
-  await write(new URL(ROUTES, dir), json(routes))
+  await write(new URL(ROUTES, dir), routesJson(routes))
   return Object.keys(pages).length
 }
 

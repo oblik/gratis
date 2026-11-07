@@ -1,4 +1,4 @@
-import { contentKey, json, ROUTES, templateKey } from './bucket.ts'
+import { contentKey, ROUTES, templateKey } from './bucket.ts'
 import {
   planCreate,
   planDelete,
@@ -7,7 +7,7 @@ import {
   type Edit,
   type Write,
 } from './plan.ts'
-import type { Routes } from './routes.ts'
+import { routesJson, type Routes } from './routes.ts'
 import type { Fields } from './schema.ts'
 import { readContent, required, type Site } from './site.ts'
 import { render } from './template/render.ts'
@@ -19,7 +19,7 @@ const JSON_TYPE = 'application/json'
 
 /** Writes routes.json, conditional on the version last read or written. */
 async function putRoutes(site: Site, routes: Routes) {
-  await site.objects.put(ROUTES, json(routes), {
+  await site.objects.put(ROUTES, routesJson(routes), {
     type: JSON_TYPE,
     ifMatch: site.objects.peek(ROUTES)?.etag,
   })

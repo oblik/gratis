@@ -6,6 +6,7 @@ import {
   entryPages,
   listPages,
   ownPages,
+  routesJson,
   type Page,
   type Routes,
 } from './routes.ts'
@@ -109,4 +110,24 @@ test("ownPages and affectedBy split an entry's pages from the ones that list it"
     own: ['/blog/a'],
     others: ['/', '/archive'],
   })
+})
+
+test('routesJson sorts the pages by path', () => {
+  const page = (template: string): Page => ({
+    template,
+    file: 'x.html',
+    deps: { entries: [], collections: {} },
+    updated: '',
+  })
+  const json = routesJson({
+    pages: {
+      '/blog/b': page('/blog/[slug]'),
+      '/': page('/'),
+      '/blog/a': page('/blog/[slug]'),
+    },
+    _pending: ['/blog/b'],
+  })
+  const parsed: Routes = JSON.parse(json)
+  expect(Object.keys(parsed.pages)).toStrictEqual(['/', '/blog/a', '/blog/b'])
+  expect(parsed._pending).toStrictEqual(['/blog/b'])
 })

@@ -1,5 +1,6 @@
 import {
   entryKey,
+  json,
   parseKey,
   templateId,
   type EntryKey,
@@ -24,6 +25,20 @@ export interface Routes {
   /** Queued by a save in progress, or by an interrupted one. */
   _pending: PagePath[]
 }
+
+/**
+ * The text of routes.json, its pages sorted by path. Nothing depends on the
+ * order, but developers read the file: without sorting, pages would follow
+ * Astro's route order and then the order they were added in, and shift between
+ * builds.
+ */
+export const routesJson = (routes: Routes) =>
+  json({
+    ...routes,
+    pages: Object.fromEntries(
+      Object.entries(routes.pages).sort(([a], [b]) => (a < b ? -1 : 1)),
+    ),
+  })
 
 /**
  * A page that hasn't been rendered yet: all it is known to read is its own
