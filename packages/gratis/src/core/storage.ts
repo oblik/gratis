@@ -1,13 +1,12 @@
-// The one storage client: the S3 REST API signed with the editor's key, over fetch, so it runs in
-// the browser and in Node alike. Locally the same requests go to the emulator; only the endpoint
-// and the credentials differ.
-
 import { AwsClient } from 'aws4fetch'
 
 export class ConflictError extends Error {}
 
 export interface Credentials {
-  /** The path-style endpoint of the bucket, `https://s3.<region>.amazonaws.com/<bucket>`. */
+  /**
+   * The path-style endpoint of the bucket,
+   * `https://s3.<region>.amazonaws.com/<bucket>`.
+   */
   endpoint: string
   region: string
   accessKeyId: string
@@ -36,7 +35,6 @@ export interface Storage {
     options?: PutOptions,
   ): Promise<string>
   delete(key: string): Promise<void>
-  /** Every key that starts with `prefix`, through ListObjectsV2. */
   list(prefix: string): Promise<string[]>
 }
 
@@ -113,9 +111,15 @@ export function createStorage({
   }
 }
 
-/** Text objects keyed by path, each with the ETag its next write is conditional on. */
+/**
+ * Text objects keyed by path, each with the ETag its next write is conditional
+ * on.
+ */
 export interface Cache {
-  /** Reads through the cache; `fresh` refetches. A missing object is cached as null. */
+  /**
+   * Reads through the cache; `fresh` refetches. A missing object is cached as
+   * null.
+   */
   get(key: string, options?: { fresh?: boolean }): Promise<StoredObject | null>
   /** The cached object, without a request. */
   peek(key: string): StoredObject | null | undefined

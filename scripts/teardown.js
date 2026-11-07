@@ -1,8 +1,9 @@
-// Removes everything the setup scripts created for one site: the Cloudflare CNAME and
-// Configuration Rule, every object version in the bucket, the bucket, and the editor IAM user.
-// Irreversible, so the bucket name must be repeated.
+// Removes everything the setup scripts created for one site: the Cloudflare
+// CNAME and Configuration Rule, every object version in the bucket, the bucket,
+// and the editor IAM user. Irreversible, so the bucket name must be repeated.
 //
-//   GRATIS_SITE=<bucket> node --env-file=.env scripts/teardown.js --confirm <bucket>
+//   GRATIS_SITE=<bucket> node --env-file=.env scripts/teardown.js \
+//     --confirm <bucket>
 
 import {
   DeleteAccessKeyCommand,
@@ -78,7 +79,8 @@ if (rule) {
   console.log('deleted Configuration Rule')
 }
 
-// S3: a versioned bucket must be emptied of every version and delete marker first.
+// S3: a versioned bucket must be emptied of every version and delete marker
+// first.
 const s3 = new S3Client({ region })
 let deleted = 0
 for (let page = {}; ;) {

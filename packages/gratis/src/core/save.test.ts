@@ -1,6 +1,3 @@
-// The save flow of notes/editing.md, against the emulator's objects in process: the same ETags
-// and conditional writes as S3, without HTTP.
-
 import { JSDOM } from 'jsdom'
 import { expect, test } from 'vitest'
 
@@ -16,7 +13,10 @@ const { DOMParser } = new JSDOM('').window
 type Bucket = ReturnType<typeof memoryBackend>
 type Failing = (key: string) => boolean
 
-/** Opens the site in `bucket`, through storage whose puts or deletes fail for the keys `fail` picks. */
+/**
+ * Opens the site in `bucket`, through storage whose puts or deletes fail for
+ * the keys `fail` picks.
+ */
 function open(bucket: Bucket, fail: { put?: Failing; delete?: Failing } = {}) {
   const storage = emulatedStorage(bucket)
   const { put, delete: remove } = storage
@@ -68,7 +68,8 @@ test('an interrupted save leaves its pages queued, and the next session renders 
   await expect(saveEntry(site, 'site', { title: 'New' })).rejects.toThrow(
     /network/,
   )
-  // Content before HTML: the entry is saved, its page is still the old one, and queued.
+  // Content before HTML: the entry is saved, its page is still the old one, and
+  // queued.
   expect(text(backend, '_gratis/content/site.json')).toMatch(/New/)
   expect(text(backend, 'index.html')).toMatch(/Before/)
   expect(routes(backend)._pending).toStrictEqual(['/'])
@@ -144,7 +145,8 @@ test('a save re-renders a listing when it shows the entry or queries a field tha
     date: '2026-02-01',
     featured: false,
   })
-  // The home page now shows only b, so a's featured flag matters to a's page alone...
+  // The home page now shows only b, so a's featured flag matters to a's page
+  // alone...
   expect(
     await saveEntry(site, 'posts/a', {
       title: 'A',

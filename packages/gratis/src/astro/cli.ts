@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // gratis deploy --bucket <name>   pull content, build, upload dist/
 // gratis pull --bucket <name>     copy the bucket's content files into the repo
-// gratis preview [--port 4321]    serve dist/ with the storage emulator, as if it were the bucket
+// gratis preview [--port 4321]    serve dist/ as if it were the bucket
 //
-// Credentials and region come from the environment: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-// AWS_SESSION_TOKEN (optional) and AWS_REGION.
+// Credentials and region come from the environment: AWS_ACCESS_KEY_ID,
+// AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN (optional) and AWS_REGION.
 import { readdir, readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join, relative } from 'node:path'
@@ -74,11 +74,14 @@ async function* files(dir: string): AsyncGenerator<string> {
   }
 }
 
-// Seeded on the first deploy and never replaced after: editors own them once the site is live.
+/**
+ * Seeded on the first deploy and never replaced after: editors own them once
+ * the site is live.
+ */
 const SEEDED = [CONTENT]
-// Never uploaded: editors create them.
+/** Never uploaded: editors create them. */
 const SKIPPED = [AUTH, 'uploads/']
-// Content-hashed, so cacheable forever.
+/** Content-hashed, so cacheable forever. */
 const IMMUTABLE = ['_astro/', 'admin/assets/']
 const under = (key: string, prefixes: string[]) =>
   prefixes.some((prefix) => key.startsWith(prefix))
@@ -107,8 +110,11 @@ async function upload(storage: Storage) {
   console.log(`uploaded ${uploaded} file(s) to ${args.bucket}`)
 }
 
-// The built site as the bucket, on localhost (a secure context, so the admin's WebCrypto works).
-// Saves write into dist/, so a rebuild starts over from the repo's content.
+/**
+ * The built site as the bucket, on localhost (a secure context, so the admin's
+ * WebCrypto works). Saves write into dist/, so a rebuild starts over from the
+ * repo's content.
+ */
 async function preview() {
   const port = Number(args.port)
   const origin = `http://localhost:${port}`

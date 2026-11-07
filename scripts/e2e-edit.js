@@ -1,6 +1,6 @@
-// The admin's save path end to end against the live bucket, minus the form: log in with the
-// published blob, save the `site` single, check the website, then check a stale save conflicts.
-// Restores the original title at the end.
+// The admin's save path end to end against the live bucket, minus the form: log
+// in with the published blob, save the `site` single, check the website, then
+// check a stale save conflicts. Restores the original title at the end.
 
 import { JSDOM } from 'jsdom'
 

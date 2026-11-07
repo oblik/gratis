@@ -1,7 +1,6 @@
-// The repo's content files under the bucket's content keys (notes/content.md): with `posts` at
-// `src/data/posts/`, `_gratis/content/posts/hello.json` is `src/data/posts/hello.json`. The one
-// place that maps between the two layouts: the loaders read through it, the build copies it into
-// dist/, dev serves it to the admin, and pull writes the bucket's content into it.
+// The repo's content files under the bucket's content keys: with `posts` at
+// `src/data/posts/`, `_gratis/content/posts/hello.json` is
+// `src/data/posts/hello.json`.
 
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 
@@ -17,20 +16,18 @@ import type { Collection } from '../core/schema.ts'
 import type { Content } from '../core/template/render.ts'
 import { orNull, type Backend } from '../emulator/index.ts'
 
-/** The repo path of an entry's file: the single's file, or `<id>.json` in the collection's folder. */
 const sourcePath = ({ single, source }: Collection, id?: string) =>
   single ? source : `${source}${id}.json`
 
 /**
- * The content files of `collections` under `root`. A getter, because in dev the loaders record
- * collections as they run. Keys that aren't an entry of a known collection read as missing and
+ * `collections` is a getter because in dev the loaders record collections as
+ * they run. Keys that aren't an entry of a known collection read as missing and
  * can't be written.
  */
 export function repoContent(
   root: URL,
   collections: () => Record<string, Collection>,
 ): Backend {
-  /** The repo file of a content key, if it is an entry of a known collection. */
   const fileOf = (key: string) => {
     const entry = parseContentKey(key)
     if (entry == null) return undefined
@@ -85,7 +82,6 @@ export function repoContent(
   }
 }
 
-/** Every entry's fields in a backend's content files, by entry key. */
 export async function readContent(content: Backend): Promise<Content> {
   const result: Content = {}
   for (const key of await content.list(CONTENT))

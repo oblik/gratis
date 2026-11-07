@@ -1,17 +1,7 @@
-// The template pass (notes/astro.md, notes/rendering.md): the same Astro build run a second time,
-// in which every read of Gratis content gives a sentinel instead of a value, so each route's output
-// is a template the renderer can fill. Everything that differs in that pass is here; the loaders,
-// the getters, `Each`, `If` and the build only ask for it.
-//
-//   1. Entries hold sentinels, so the content config accepts anything.
-//   2. A single's entry is its sentinels: `site.title` is `{{gratis:entry:site:title}}`.
-//   3. getCollection returns one placeholder entry. Read outside an `Each`, it is the page's own
-//      entry (`{{gratis:route:title}}`). Its id is a placeholder id, which a dynamic route's
-//      getStaticPaths puts in the params, so the pass builds that route exactly once.
-//   4. `Each` renders its item once, reading `{{gratis:item:…}}`, between markers carrying the
-//      query; `If` wraps its content in markers carrying the value.
-//   5. The build reads which collection a dynamic route is bound to from the placeholder id in the
-//      path the route was built at.
+// The template pass: the same Astro build run a second time, in which every
+// read of Gratis content gives a sentinel instead of a value, so each route's
+// output is a template the renderer can fill. Everything that differs in that
+// pass is here.
 
 import { z } from 'astro/zod'
 
@@ -29,7 +19,10 @@ const MODE = 'GRATIS_MODE'
 
 export const isTemplateMode = () => process.env[MODE] === 'template'
 
-/** Runs `build` with template mode on: the pass is a nested build in the same process. */
+/**
+ * Runs `build` with template mode on: the pass is a nested build in the same
+ * process.
+ */
 export async function inTemplateMode<T>(build: () => Promise<T>) {
   process.env[MODE] = 'template'
   try {
@@ -39,13 +32,11 @@ export async function inTemplateMode<T>(build: () => Promise<T>) {
   }
 }
 
-// 1. and 2.
-
-/** An entry's schema in the content config: every field accepts a sentinel. */
+/** Every field accepts a sentinel. */
 export const anyFields = (fields: string[]) =>
   z.object(Object.fromEntries(fields.map((field) => [field, z.any()])))
 
-/** A single's one entry. */
+/** `site.title` is `{{gratis:entry:site:title}}`. */
 export const singleEntry = (collection: string, fields: string[]) =>
   Object.fromEntries(
     fields.map((field) => [
@@ -54,17 +45,23 @@ export const singleEntry = (collection: string, fields: string[]) =>
     ]),
   )
 
-// 3.
-
 const placeholderId = (collection: string) => `gratis-placeholder-${collection}`
 const PLACEHOLDER_ID = /gratis-placeholder-([\w-]+)/
 
-// A getCollection result carries the list it stands for under this symbol, for `Each` to put in
-// its marker. A registered symbol, since the getters and the components may be loaded as separate
-// module instances.
+/**
+ * A getCollection result carries the list it stands for under this symbol, for
+ * `Each` to put in its marker. A registered symbol, since the getters and the
+ * components may be loaded as separate module instances.
+ */
 const LIST = Symbol.for('gratis.list')
 
-/** getCollection's result: one placeholder entry, standing for the list `query` selects. */
+/**
+ * `getCollection`'s result: one placeholder entry, standing for the list
+ * `query` selects. Read outside an `Each`, it is the page's own entry
+ * (`{{gratis:route:title}}`). A dynamic route's getStaticPaths puts its id in
+ * the params, so the pass builds the route exactly once, at a path that names
+ * the collection (routeBinding).
+ */
 export function placeholderList(
   collection: string,
   query: Query,
@@ -87,8 +84,6 @@ export function placeholderList(
   return Object.assign([entry], { [LIST]: list })
 }
 
-// 4.
-
 const listOf = (value: unknown) =>
   value != null && typeof value === 'object'
     ? (value as Record<symbol, ListRef | undefined>)[LIST]
@@ -108,8 +103,9 @@ const placeholderItem = new Proxy<Record<string, string>>(
 )
 
 /**
- * What an `Each` over `of` renders in the template pass: its item once, as a placeholder, between
- * markers. Undefined outside the pass, or when `of` isn't Gratis content: then it renders as usual.
+ * What an `Each` over `of` renders in the template pass: its item once, as a
+ * placeholder, between markers. Undefined outside the pass, or when `of` isn't
+ * Gratis content: then it renders as usual.
  */
 export function eachBlock(of: unknown) {
   if (!isTemplateMode()) return undefined
@@ -129,8 +125,9 @@ export function eachBlock(of: unknown) {
 }
 
 /**
- * The markers an `If` wraps its content in during the template pass. Undefined outside the pass,
- * or when `when` isn't Gratis content: then it renders as usual.
+ * The markers an `If` wraps its content in during the template pass. Undefined
+ * outside the pass, or when `when` isn't Gratis content: then it renders as
+ * usual.
  */
 export function ifBlock(when: unknown) {
   if (!isTemplateMode()) return undefined
@@ -146,9 +143,10 @@ export function ifBlock(when: unknown) {
   }
 }
 
-// 5.
-
-/** The collection a dynamic route is bound to, from the path its template was built at. */
+/**
+ * The collection a dynamic route is bound to, from the placeholder id in its
+ * built path.
+ */
 export function routeBinding(
   template: string,
   builtFile: string,

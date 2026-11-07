@@ -1,7 +1,3 @@
-// The shape of _gratis/schema.json: the collections the admin edits, their fields, where their
-// files are in the repo, and which dynamic routes are bound to which collection. The build compiles
-// it from the content config (see notes/content.md).
-
 export interface TextField {
   type: 'text'
   label: string
@@ -14,18 +10,23 @@ export interface BooleanField {
 }
 export type Field = TextField | BooleanField
 
-/** An entry's fields, by name. */
 export type Fields = Record<string, unknown>
 
 export interface Collection {
   single: boolean
   label: string
-  /** In the repo: a single's file, or a folder (ending in `/`) with one JSON file per entry. */
+  /**
+   * In the repo: a single's file, or a folder (ending in `/`) with one JSON
+   * file per entry.
+   */
   source: string
   fields: Record<string, Field>
 }
 
-/** A dynamic route bound to a collection: one page per entry, the entry id in `param`. */
+/**
+ * A dynamic route bound to a collection: one page per entry, the entry id in
+ * `param`.
+ */
 export interface RouteBinding {
   collection: string
   param: string
@@ -38,7 +39,7 @@ export interface Schema {
   routes: Record<string, RouteBinding>
 }
 
-/** A new entry's fields: every field present, so the build's schema accepts it. */
+/** Every field is present, so the build's schema accepts the new entry. */
 export const emptyFields = ({ fields }: Collection): Fields =>
   Object.fromEntries(
     Object.entries(fields).map(([key, field]) => [
@@ -47,7 +48,7 @@ export const emptyFields = ({ fields }: Collection): Fields =>
     ]),
   )
 
-/** Checks a draft against the collection's fields. Errors are keyed by field name. */
+/** Errors by field name. */
 export function validate(
   { fields }: Collection,
   draft: Fields,
@@ -72,13 +73,11 @@ export function validate(
   return errors
 }
 
-/** The fields whose values differ between two versions of an entry. */
 export const changedFields = (before: Fields, after: Fields) =>
   [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
     (field) => !equal(before[field], after[field]),
   )
 
-/** Structural equality of field values. */
 export function equal(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (typeof a !== 'object' || typeof b !== 'object' || a == null || b == null)

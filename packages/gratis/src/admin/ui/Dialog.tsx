@@ -1,6 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
-/** A modal `<dialog>`: the browser traps focus and closes it on Esc, which calls `onCancel`. */
+/**
+ * A modal `<dialog>`: the browser traps focus and closes it on Esc, which calls
+ * `onCancel`.
+ */
 export function Dialog({
   open,
   onCancel,

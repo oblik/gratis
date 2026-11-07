@@ -1,8 +1,3 @@
-// Password-encrypted editor credentials (notes/auth.md). WebCrypto only, so it runs unchanged in
-// the browser and in Node.
-//
-// In the blob, the storage location is plaintext: it isn't secret, and the SPA needs it to know where to sign.
-
 const ITERATIONS = 600_000
 export const MIN_PASSWORD_LENGTH = 12
 
@@ -41,6 +36,10 @@ export interface StorageLocation {
 }
 export interface AuthBlob {
   v: 1
+  /**
+   * Plaintext: it isn't secret, and the admin needs it before login to find the
+   * bucket.
+   */
   storage: StorageLocation
   kdf: { name: 'PBKDF2'; hash: 'SHA-256'; iterations: number; salt: string }
   iv: string

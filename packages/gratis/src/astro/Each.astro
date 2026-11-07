@@ -1,7 +1,8 @@
 ---
 import { eachBlock } from './template-mode.ts'
 
-// Once per item; in the template pass, once for a placeholder item, between markers.
+// Once per item; in the template pass, once for a placeholder item, between
+// markers.
 const { of } = Astro.props
 const block = eachBlock(of)
 const items = block ? block.items : (of ?? [])

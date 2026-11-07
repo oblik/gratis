@@ -1,8 +1,6 @@
-// `gratis pull`, and the first step of `gratis deploy` (notes/astro.md): the bucket's content files
-// into the repo, so a build starts from what editors saved.
-//
-// A collection's folder is mirrored: entries deleted in the bucket are deleted in the repo too, or
-// the next deploy would seed them again. A single missing from the bucket is left alone.
+// A collection's folder is mirrored: entries deleted in the bucket are deleted
+// in the repo too, or the next deploy would seed them again. A single missing
+// from the bucket is left alone.
 
 import {
   collectionFolder,

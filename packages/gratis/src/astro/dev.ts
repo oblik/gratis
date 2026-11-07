@@ -1,13 +1,3 @@
-// The emulator's backend in `astro dev`, routing each key to where it lives:
-//
-//   _gratis/schema.json      compiled from the content config on each read
-//   _gratis/routes.json      in memory, with no pages: a save writes only the entry, and Astro
-//                            re-renders on its own
-//   _gratis/content/…        the loaders' files in the repo (repo.ts)
-//   admin/…                  the package's build of the admin
-//
-// Anything else, like a page a save renders, is dropped.
-
 import { readFile } from 'node:fs/promises'
 
 import { json, parseContentKey, ROUTES, SCHEMA } from '../core/bucket.ts'
@@ -19,11 +9,18 @@ import { state } from './state.ts'
 
 const encode = (text: string) => new TextEncoder().encode(text)
 
-// Tells the admin to skip the login and use this origin as its endpoint (see admin/session.ts).
+/**
+ * Tells the admin to skip the login and use this origin as its endpoint (see
+ * admin/session.ts).
+ */
 const LOCAL_META = '<meta name="gratis-storage" content="local">'
 
 const ADMIN = 'admin/'
 
+/**
+ * Other writes, like a page a save renders, are dropped: Astro re-renders on
+ * its own.
+ */
 export function devBackend({
   root,
   adminDist,
@@ -31,6 +28,7 @@ export function devBackend({
   root: URL
   adminDist: URL
 }): Backend {
+  // No pages, so a save writes only the entry.
   const routes: Routes = { pages: {}, _pending: [] }
   const memory = memoryBackend({ [ROUTES]: json(routes) })
   const content = repoContent(root, () => state().collections)

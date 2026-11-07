@@ -1,10 +1,8 @@
-// Buckets for tests: a backend with a built site in it, as `astro build` would leave in dist/.
-
 import { memoryBackend } from './index.ts'
 
 export const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n'
 
-// A single page showing the site's title.
+/** A single page showing the site's title. */
 export const bucket = () =>
   memoryBackend({
     '_gratis/schema.json': json({
@@ -37,7 +35,7 @@ export const bucket = () =>
     'about/index.html': 'about',
   })
 
-// A blog: a home page listing posts by date, and a page per post.
+/** A blog: a home page listing posts by date, and a page per post. */
 export const blog = () =>
   memoryBackend({
     '_gratis/schema.json': json({

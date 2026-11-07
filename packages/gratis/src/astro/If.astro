@@ -1,7 +1,8 @@
 ---
 import { ifBlock } from './template-mode.ts'
 
-// Its content when `when` is truthy; in the template pass, always, between markers.
+// Its content when `when` is truthy; in the template pass, always, between
+// markers.
 const { when } = Astro.props
 const block = ifBlock(when)
 ---

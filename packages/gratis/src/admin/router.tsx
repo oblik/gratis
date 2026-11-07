@@ -1,4 +1,5 @@
-// Code-based routes on hash history (`/admin/#/…`), so the bucket serves only /admin/index.html.
+// Code-based routes on hash history (`/admin/#/…`), so the bucket serves only
+// /admin/index.html.
 
 import {
   createHashHistory,
@@ -23,7 +24,7 @@ import { EntryError, Single } from './views/Single.tsx'
 function Root() {
   return (
     <main className="mx-auto max-w-2xl p-4">
-      {/* WebCrypto, which both unlocking and request signing need, exists only on HTTPS. */}
+      {/* Unlocking and request signing need WebCrypto, which needs HTTPS. */}
       {crypto.subtle ? (
         <Outlet />
       ) : (
@@ -49,7 +50,7 @@ const login = createRoute({
   component: Login,
 })
 
-// Everything behind the login: the loaded site is in the route context.
+/** Everything behind the login: the loaded site is in the route context. */
 const app = createRoute({
   getParentRoute: () => root,
   id: '_app',

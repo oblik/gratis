@@ -1,28 +1,24 @@
-// The template language (notes/rendering.md): what the template pass writes into a page where
-// content goes, and what the renderer reads back. This module is the whole grammar; the Astro side
-// only formats and the renderer only parses.
+// The template language: the template pass formats it, the renderer parses it.
 //
 // A value is a sentinel, anywhere a string goes (text, attributes, <title>):
 //
-//   {{gratis:entry:site:title}}    a field of a named entry: a single, or `posts/hello`
-//   {{gratis:route:title}}         a field of the page's own entry
-//   {{gratis:item:title}}          a field of the current item of an `each`
+//   {{gratis:entry:site:title}}  a field of a named entry, like `posts/hello`
+//   {{gratis:route:title}}       a field of the page's own entry
+//   {{gratis:item:title}}        a field of the current item of an `each`
 //
-// Blocks are comment pairs around their content:
+// Blocks are comment pairs around their content. An `if` is kept when its value
+// is truthy; an `each` repeats once per entry its query matches:
 //
-//   <!--gratis:if route:featured--> … <!--/gratis:if-->          kept when the value is truthy
+//   <!--gratis:if route:featured--> … <!--/gratis:if-->
 //   <!--gratis:each query:posts {"sort":"-date"}--> … <!--/gratis:each-->
-//                                                                once per entry the query matches
 
 import type { Query } from './query.ts'
 
-/** A value a template reads. */
 export type ValueRef =
   | { scope: 'entry'; key: string; field: string }
   | { scope: 'route'; field: string }
   | { scope: 'item'; field: string }
 
-/** What an `each` repeats over: the entries of a collection that match a query. */
 export interface ListRef {
   collection: string
   query: Query
@@ -62,13 +58,19 @@ export function parseValue(text: string): ValueRef | undefined {
 
 export const hasValues = (text: string) => text.includes(PREFIX)
 
-/** Replaces every sentinel in `text` with `fill(ref)`, in one pass so filled values are never re-read. */
+/**
+ * Replaces every sentinel in `text` with `fill(ref)`, in one pass so filled
+ * values are never re-read.
+ */
 export const replaceValues = (text: string, fill: (ref: ValueRef) => string) =>
   text.replace(SENTINEL, (_, ref: string) => fill(parseRef(ref)))
 
 // Markers
 
-// The query is JSON inside a comment, so `>` is escaped where it could end the comment early.
+/**
+ * The query is JSON inside a comment, so `>` is escaped where it could end the
+ * comment early.
+ */
 const formatList = ({ collection, query }: ListRef) => {
   const json = Object.keys(query).length
     ? ` ${JSON.stringify(query).replace(/>/g, '\\u003e')}`
@@ -85,7 +87,6 @@ function parseList(text: string): ListRef {
   return { collection: match[1], query: match[2] ? JSON.parse(match[2]) : {} }
 }
 
-/** The comment that opens or closes a block. */
 export function formatMarker(marker: Marker): string {
   if (marker.kind === 'end') return `<!--/gratis:${marker.of}-->`
   const body =
@@ -93,7 +94,7 @@ export function formatMarker(marker: Marker): string {
   return `<!--gratis:${marker.kind} ${body}-->`
 }
 
-/** The marker a comment's data is, or null for a comment that isn't Gratis's. */
+/** Null for a comment that isn't Gratis's; throws if it is but is malformed. */
 export function parseMarker(data: string): Marker | null {
   if (data === '/gratis:if' || data === '/gratis:each')
     return { kind: 'end', of: data === '/gratis:if' ? 'if' : 'each' }

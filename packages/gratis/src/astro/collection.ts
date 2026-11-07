@@ -1,6 +1,3 @@
-// `defineCollection` and the loaders: Astro's own, except that they record where entries live, so
-// the admin can write them back, and in the template pass they hand out placeholders.
-
 import { fileURLToPath } from 'node:url'
 
 import type { Loader } from 'astro/loaders'
@@ -40,7 +37,8 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
   const source =
     loader.kind === 'file' ? loader.path : loader.base.replace(/\/?$/, '/')
 
-  // The type is the real one either way: pages are written against real entries.
+  // The type is the real one either way: pages are written against real
+  // entries.
   const schema = (isTemplateMode()
     ? anyFields(Object.keys(fields))
     : z.object(
@@ -76,7 +74,8 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
         const sync = async () => {
           store.clear()
           if (isTemplateMode()) {
-            // A collection stores nothing: getCollection returns its placeholder.
+            // A collection stores nothing: getCollection returns its
+            // placeholder.
             if (single) {
               const data = singleEntry(name, Object.keys(fields))
               store.set({ id: name, data: await parseData({ id: name, data }) })
@@ -94,7 +93,8 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
           }
         }
         await sync()
-        // In dev, an admin save (or a hand edit) rewrites a file; reload it like Astro's loaders do.
+        // In dev, an admin save (or a hand edit) rewrites a file; reload it
+        // like Astro's loaders do.
         watcher?.add(path)
         const reload = (changed: string) =>
           (single

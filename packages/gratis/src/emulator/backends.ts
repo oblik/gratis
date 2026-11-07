@@ -1,9 +1,7 @@
-// Where the emulator keeps objects: a key-value store with no S3 or HTTP in it.
-
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 
-/** A file read that resolves to null when there is no such file. */
+/** Null for a missing file, or a folder. */
 export const orNull = <T>(read: Promise<T>) =>
   read.catch((error: NodeJS.ErrnoException) =>
     error.code === 'ENOENT' || error.code === 'EISDIR'
@@ -38,7 +36,6 @@ export function memoryBackend(
   }
 }
 
-/** Objects as files under `dir`, the bucket layout of dist/. */
 export function folderBackend(dir: string): Backend {
   const root = resolve(dir)
   const path = (key: string) => {

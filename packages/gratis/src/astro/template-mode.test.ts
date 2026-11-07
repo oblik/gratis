@@ -1,5 +1,3 @@
-// The template pass: what Gratis content reads as when the build runs in template mode.
-
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
 import {

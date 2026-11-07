@@ -1,7 +1,3 @@
-// What an edit changes, decided before anything is written (notes/editing.md). Pure: a plan reads
-// the loaded schema, routes and entry ids and returns the change as data, which save.ts then
-// carries out. So "what does deleting this entry do" is answered without storage or a DOM.
-
 import {
   contentKey,
   entryKey,
@@ -28,9 +24,9 @@ export type Write =
   | { key: ObjectKey; delete: true }
 
 export interface Edit {
-  /** The write, if the edit makes one. Nothing below happens unless it succeeds. */
+  /** Nothing below happens unless it succeeds. */
   write?: Write
-  /** routes.json's pages after the edit, when it adds or removes any. */
+  /** Routes.json's pages after the edit, when it adds or removes any. */
   pages?: Routes['pages']
   /** The entry ids after the edit, when it adds or removes any. */
   entries?: Record<string, string[]>
@@ -40,11 +36,6 @@ export interface Edit {
   render: PagePath[]
 }
 
-/**
- * Saving an entry's fields re-renders the pages that read it, and the pages that query its
- * collection by a field that changed. The write is conditional on `etag`, the version the edit
- * started from.
- */
 export function planSave(
   site: SiteState,
   key: string,
@@ -57,10 +48,6 @@ export function planSave(
   }
 }
 
-/**
- * Creating an entry adds a page per route bound to its collection, and re-renders those and every
- * page that queries the collection. The write fails if an entry with the id already exists.
- */
 export function planCreate(
   site: SiteState,
   collection: string,
@@ -91,7 +78,6 @@ export function planCreate(
   }
 }
 
-/** Deleting an entry deletes its own pages, and re-renders the pages that read or query it. */
 export function planDelete(site: SiteState, key: string): Edit {
   const { collection, id } = parseKey(key)
   const { own, others } = affectedBy(site.routes, key)
@@ -109,7 +95,6 @@ export function planDelete(site: SiteState, key: string): Edit {
   }
 }
 
-/** Rendering pages without changing content: `paths`, or every page of the site. */
 export const planRender = (
   site: SiteState,
   paths = Object.keys(site.routes.pages),

@@ -1,13 +1,19 @@
-// What the integration's hooks and the content config's loaders share. Vite may load the config's
-// module graph and the content config's as separate instances in the same process, so it lives on
-// globalThis.
+// Vite may load the Astro config's module graph and the content config's as
+// separate instances in the same process, so what the integration's hooks and
+// the loaders share lives on globalThis.
 
 import type { Collection } from '../core/schema.ts'
 
 interface State {
-  /** What the loaders recorded, compiled into schema.json by the build and by the dev server. */
+  /**
+   * What the loaders recorded, compiled into schema.json by the build and by
+   * the dev server.
+   */
   collections: Record<string, Collection>
-  /** The template pass's output, per route pattern, reported back by its nested build. */
+  /**
+   * The template pass's output, per route pattern, reported back by its nested
+   * build.
+   */
   templateRoutes?: Map<string, URL[]>
 }
 

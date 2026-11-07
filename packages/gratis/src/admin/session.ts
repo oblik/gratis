@@ -1,4 +1,5 @@
-// The editor's session: the decrypted keys in sessionStorage, and the site loaded with them.
+// The editor's session: the decrypted keys in sessionStorage, and the site
+// loaded with them.
 
 import { decryptCredentials, type AuthBlob } from '../core/auth.ts'
 import { renderPending } from '../core/save.ts'
@@ -21,7 +22,10 @@ export interface Opened {
 
 let opened: Promise<Opened> | null = null
 
-/** In `astro dev` the page says storage is the local emulator on this origin, which needs no login. */
+/**
+ * In `astro dev` the page says storage is the local emulator on this origin,
+ * which needs no login.
+ */
 export const isLocal = () =>
   document.querySelector('meta[name="gratis-storage"][content="local"]') != null
 
@@ -39,7 +43,10 @@ function session(): Credentials | null {
 
 export const hasSession = () => session() != null
 
-/** Loads the site once per session, finishing any interrupted save. Null when logged out. */
+/**
+ * Loads the site once per session, finishing any interrupted save. Null when
+ * logged out.
+ */
 export function openSite(): Promise<Opened> | null {
   const current = session()
   if (!current) return null

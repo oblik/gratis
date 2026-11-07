@@ -1,7 +1,3 @@
-// A loaded site: schema.json, routes.json, the entry ids and every content file, read through the
-// object cache, which holds the ETags later writes are conditional on. Edits are plan.ts and
-// save.ts. `DOMParser` is passed in so this runs in the browser and in Node alike.
-
 import {
   collectionFolder,
   contentKey,
@@ -18,7 +14,6 @@ import type { Content, Dom } from './template/render.ts'
 
 export interface Site extends SiteState {
   objects: Cache
-  /** What pages are rendered with. */
   dom: Dom
 }
 export interface Entry {
@@ -31,7 +26,6 @@ export async function required(objects: Cache, key: string, fresh = false) {
   return object
 }
 
-/** Every entry key of the site: the singles, and each listed entry of the other collections. */
 const entryKeys = (site: Site) =>
   Object.entries(site.schema.collections).flatMap(([name, { single }]) =>
     single ? [name] : site.entries[name].map((id) => entryKey(name, id)),
@@ -54,7 +48,7 @@ export async function loadSite(objects: Cache, dom: Dom): Promise<Site> {
   return site
 }
 
-/** An entry's fields and the ETag a save of them is conditional on. `fresh` refetches it and routes.json. */
+/** `fresh` refetches the entry and routes.json. */
 export async function readEntry(
   site: Site,
   key: string,
@@ -66,7 +60,6 @@ export async function readEntry(
   return { fields: file ? JSON.parse(file.text) : {}, etag: file?.etag }
 }
 
-/** Every entry's fields, by entry key: what pages are rendered from. */
 export async function readContent(site: Site): Promise<Content> {
   const keys = entryKeys(site)
   const entries = await Promise.all(keys.map((key) => readEntry(site, key)))

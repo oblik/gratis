@@ -1,13 +1,3 @@
-// Carrying out an edit planned by plan.ts, in the order notes/editing.md gives:
-//
-//   1. Queue the pages to render in routes.json's `_pending`, along with any pages added or removed.
-//   2. Make the write. If it fails, take the added or removed pages back out and stop.
-//   3. Delete what the edit removes, then render the queue.
-//   4. Clear the queue.
-//
-// Content is written before HTML, so a tab that dies after step 2 leaves a queue that the next
-// session finishes with renderPending.
-
 import { contentKey, json, ROUTES, templateKey } from './bucket.ts'
 import {
   planCreate,
@@ -42,7 +32,7 @@ async function write(site: Site, write: Write) {
   await site.objects.put(key, put, { type: JSON_TYPE, ifMatch, ifNoneMatch })
 }
 
-/** Renders and writes the given pages, recording their new dependencies in site.routes. */
+/** Also records the pages' new dependencies in site.routes. */
 async function renderPages(site: Site, paths: string[], onPage?: OnPage) {
   const content = await readContent(site)
   for (const path of paths) {
@@ -60,7 +50,12 @@ async function renderPages(site: Site, paths: string[], onPage?: OnPage) {
   }
 }
 
-/** Carries out an edit. Returns the pages rendered: its own and any an earlier save left queued. */
+/**
+ * The pages to render are queued in routes.json before the content write and
+ * unqueued only once they're rendered, so a tab that dies midway leaves a queue
+ * for the next session's renderPending. Returns the pages rendered, including
+ * any an earlier save left queued.
+ */
 export async function commit(site: Site, edit: Edit, onPage?: OnPage) {
   const before = site.routes
   const pending = [...new Set([...before._pending, ...edit.render])]
@@ -71,8 +66,8 @@ export async function commit(site: Site, edit: Edit, onPage?: OnPage) {
   try {
     if (edit.write) await write(site, edit.write)
   } catch (error) {
-    // The write didn't happen, so neither did the pages it added or removed. The queue stays:
-    // rendering a page again is harmless.
+    // The write didn't happen, so neither did the pages it added or removed.
+    // The queue stays: rendering a page again is harmless.
     if (edit.pages) {
       const restored = {
         pages: before.pages,
@@ -89,10 +84,7 @@ export async function commit(site: Site, edit: Edit, onPage?: OnPage) {
   return pending
 }
 
-/**
- * Saves an entry's fields and re-renders the pages that depend on them. `etag` is the version the
- * edit started from; it defaults to the cached one.
- */
+/** `etag` is the version the edit started from, by default the cached one. */
 export function saveEntry(
   site: Site,
   key: string,
@@ -109,7 +101,6 @@ export function saveEntry(
   )
 }
 
-/** Creates an entry and its pages, and re-renders the pages that query its collection. */
 export const createEntry = (
   site: Site,
   collection: string,
@@ -118,14 +109,12 @@ export const createEntry = (
   onPage?: OnPage,
 ) => commit(site, planCreate(site, collection, id, fields), onPage)
 
-/** Deletes an entry and its pages, and re-renders the pages that read or query it. */
 export const deleteEntry = (site: Site, key: string, onPage?: OnPage) =>
   commit(site, planDelete(site, key), onPage)
 
-/** Finishes an interrupted save: renders what the last one left queued, if anything. */
+/** Finishes an interrupted save. */
 export const renderPending = async (site: Site, onPage?: OnPage) =>
   site.routes._pending.length ? commit(site, planRender(site, []), onPage) : []
 
-/** Regenerates every page, dependencies included (notes/editing.md). */
 export const renderAll = (site: Site, onPage?: OnPage) =>
   commit(site, planRender(site), onPage)

@@ -1,7 +1,3 @@
-// Objects with ETags and conditional writes over a Backend: the part of S3 the save relies on for
-// locking (notes/editing.md), in process. http.ts serves it over the wire; emulatedStorage hands
-// it to core directly, so the save flow runs against it without a server.
-
 import { createHash } from 'node:crypto'
 
 import {
@@ -18,7 +14,10 @@ export interface StoredBytes {
 
 export interface Objects {
   get(key: string): Promise<StoredBytes | null>
-  /** Returns the new ETag. Throws ConflictError if a condition fails, and writes nothing. */
+  /**
+   * Returns the new ETag. Throws ConflictError if a condition fails, and writes
+   * nothing.
+   */
   put(
     key: string,
     body: Uint8Array,
@@ -29,7 +28,10 @@ export interface Objects {
   list(prefix: string): Promise<string[]>
 }
 
-/** An object's ETag as S3 gives it for a single-part upload: the quoted MD5 of its bytes. */
+/**
+ * An object's ETag as S3 gives it for a single-part upload: the quoted MD5 of
+ * its bytes.
+ */
 export const etagOf = (body: Uint8Array) =>
   `"${createHash('md5').update(body).digest('hex')}"`
 
@@ -55,7 +57,7 @@ export function createObjects(backend: Backend): Objects {
   }
 }
 
-/** Core's Storage over a backend, in process: what the S3 client does, without HTTP or signing. */
+/** What the S3 client does, in process. */
 export function emulatedStorage(backend: Backend): Storage {
   const objects = createObjects(backend)
   const bytes = (body: string | Uint8Array) =>

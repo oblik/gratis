@@ -1,5 +1,3 @@
-// The emulator's object layer: ETags and the conditional writes the save locks with.
-
 import { expect, test } from 'vitest'
 
 import { ConflictError } from '../core/storage.ts'

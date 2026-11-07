@@ -1,7 +1,3 @@
-// The `gratis` Astro integration (notes/astro.md): in dev it serves the admin and the storage
-// emulator on the dev server's origin, and after `astro build` it runs the template pass and writes
-// _gratis/ and the admin into dist/ (build.ts).
-
 import { access } from 'node:fs/promises'
 
 import type { AstroIntegration } from 'astro'
@@ -22,7 +18,6 @@ export default function gratis(): AstroIntegration {
         // The getters import astro:content, so Vite has to process the package.
         updateConfig({ vite: { ssr: { noExternal: ['gratis'] } } })
       },
-      // The admin at /admin/ and the storage emulator over the content files, on the dev server's origin.
       'astro:server:setup': async ({ server, logger }) => {
         await access(adminDist).catch(() => logger.warn(ADMIN_MISSING))
         const handle = createEmulator(devBackend({ root, adminDist }), {
@@ -30,7 +25,8 @@ export default function gratis(): AstroIntegration {
         })
         server.middlewares.use((req, res, next) => {
           const [path, query = ''] = req.url!.split('?')
-          // ListObjectsV2 goes to the path-style endpoint's root, which is the site's `/` here.
+          // ListObjectsV2 goes to the path-style endpoint's root, which is the
+          // site's `/` here.
           const list =
             path === '/' && new URLSearchParams(query).get('list-type') === '2'
           if (

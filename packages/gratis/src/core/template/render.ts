@@ -1,11 +1,3 @@
-// render(template, { content, entry }, { DOMParser }) -> { html, deps }
-//
-// Pure: the same template and content give the same bytes in the browser and in Node, as long as
-// DOMParser is the browser's own or jsdom's (see notes/rendering.md). The template language itself
-// is in sentinels.ts; this is only the DOM walk.
-// `content` maps an entry key (`site` for a single, `posts/hello` for an entry) to its fields.
-// `entry` is the key of the page's own entry, which `route` sentinels read.
-
 import { entryKey, parseKey, type EntryKey } from '../bucket.ts'
 import { queryFields, runQuery, type QueryEntry } from './query.ts'
 import {
@@ -17,9 +9,11 @@ import {
   type ValueRef,
 } from './sentinels.ts'
 
-/** Every entry's fields, by entry key. */
 export type Content = Record<EntryKey, Record<string, unknown>>
-/** What a page read: entries, and the fields each collection's queries sort or filter by. */
+/**
+ * What a page read: entries, and the fields each collection's queries sort or
+ * filter by.
+ */
 export interface Deps {
   entries: EntryKey[]
   collections: Record<string, string[]>
@@ -32,7 +26,6 @@ const SHOW_ELEMENT = 0x1,
   SHOW_TEXT = 0x4,
   SHOW_COMMENT = 0x80
 
-/** The entries of a collection in `content`. */
 const collectionEntries = (
   content: Content,
   collection: string,
@@ -43,6 +36,10 @@ const collectionEntries = (
     )
     .map((key) => ({ id: parseKey(key).id!, fields: content[key] }))
 
+/**
+ * `entry` is the page's own entry, which `route` sentinels read. The output is
+ * the same in the browser and in Node, with jsdom's DOMParser.
+ */
 export function render(
   template: string,
   { content, entry }: { content: Content; entry?: string },
@@ -52,7 +49,7 @@ export function render(
   const entries = new Set<string>(entry ? [entry] : [])
   const collections: Record<string, Set<string>> = {}
 
-  // A value, with `item` the key of the current `each` item.
+  // `item` is the entry key of the current `each` item.
   const read = (ref: ValueRef, item?: string): unknown => {
     let key: string
     if (ref.scope === 'entry') key = ref.key
@@ -86,7 +83,8 @@ export function render(
     }
     return found
   }
-  // The siblings between a start marker and its end, counting nested pairs of the same kind.
+  // The siblings between a start marker and its end, counting nested pairs of
+  // the same kind.
   const between = (start: Comment, kind: 'if' | 'each') => {
     const nodes: Node[] = []
     let depth = 0
@@ -114,7 +112,6 @@ export function render(
     }
   }
 
-  // Fills every sentinel in text and attributes under `root`.
   const fill = (root: Node, item?: string) => {
     const replace = (s: string) =>
       replaceValues(s, (ref) => text(read(ref, item)))
@@ -136,7 +133,8 @@ export function render(
     }
   }
 
-  // 1. Lift each item template out of the page, so the page's own pass never sees item sentinels.
+  // 1. Lift each item template out of the page, so the page's own pass never
+  // sees item sentinels.
   const lists = starts(doc, 'each').map(({ start, marker }) => {
     const { nodes, end } = between(start, 'each')
     const item = doc.createDocumentFragment()

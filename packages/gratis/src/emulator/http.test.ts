@@ -1,6 +1,3 @@
-// The emulator over HTTP: the S3 wire format and the website endpoint, and the S3 client talking
-// to it as it talks to S3.
-
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 

@@ -1,6 +1,3 @@
-// A collection query: all the filtering a page may do (notes/rendering.md). The getters run it at
-// build time, the renderer runs it again when the admin re-renders the page.
-
 export interface Query {
   sort?: string
   limit?: number
@@ -14,7 +11,7 @@ export interface QueryEntry {
 const compare = (a: unknown, b: unknown) =>
   a == null ? (b == null ? 0 : 1) : b == null ? -1 : a < b ? -1 : a > b ? 1 : 0
 
-/** Equality filter, sort (ties by id), limit. */
+/** Ties sort by id. */
 export function runQuery<T extends QueryEntry>(
   entries: T[],
   { sort, limit, where }: Query = {},
@@ -32,7 +29,10 @@ export function runQuery<T extends QueryEntry>(
   return limit == null ? sorted : sorted.slice(0, limit)
 }
 
-/** The fields a query's result depends on beyond its entries: a change to them can change the matches. */
+/**
+ * The fields a query's result depends on beyond its entries: a change to them
+ * can change the matches.
+ */
 export const queryFields = ({ sort, where }: Query) => [
   ...new Set([
     ...(sort ? [sort.replace(/^-/, '')] : []),

@@ -1,5 +1,5 @@
-// The form of one entry. The base is the saved version with its ETag; the draft is the editor's
-// changes on top of it, saved conditionally on that ETag (notes/editing.md).
+// The base is the saved version with its ETag; the draft is the editor's
+// changes on top of it, saved conditionally on that ETag.
 
 import { useBlocker } from '@tanstack/react-router'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -31,7 +31,10 @@ export interface EntryFormProps {
     etag: string | undefined,
     onPage: OnPage,
   ): Promise<string[]>
-  /** The saved version: the cached one after a save, refetched (`fresh`) after a conflict. */
+  /**
+   * The saved version: the cached one after a save, refetched (`fresh`) after a
+   * conflict.
+   */
   reload(fresh: boolean): Promise<Entry>
   /** Called after a save, with the draft now the base. */
   onSaved?(): void

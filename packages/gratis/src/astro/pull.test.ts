@@ -1,5 +1,3 @@
-// Pulling the bucket's content into the repo, against a bucket in memory.
-
 import {
   mkdir,
   mkdtemp,

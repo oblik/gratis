@@ -1,5 +1,3 @@
-// Content-Type by extension, for the emulator's responses and for `gratis deploy`'s uploads.
-
 import { extname } from 'node:path'
 
 const TYPES: Record<string, string> = {

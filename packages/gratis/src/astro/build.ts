@@ -1,7 +1,3 @@
-// What `astro build` leaves in dist/ besides the site (notes/astro.md): the templates from a second
-// build in template mode, schema.json, routes.json, the admin SPA and the content files, so dist/
-// is a complete bucket.
-
 import { access, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -39,7 +35,6 @@ async function write(url: URL, text: string | Uint8Array) {
 const unixPath = (from: URL, to: URL) =>
   relative(fileURLToPath(from), fileURLToPath(to)).split('\\').join('/')
 
-/** The template pass (template-mode.ts): the same build again, into `scratch`. */
 async function buildTemplates(root: URL, scratch: URL) {
   const { build } = await import('astro')
   await inTemplateMode(() =>
@@ -54,8 +49,8 @@ async function buildTemplates(root: URL, scratch: URL) {
 }
 
 /**
- * Copies the templates into dist/ by template id. A dynamic route was built once, at its
- * collection's placeholder id, which binds the route to that collection.
+ * Returns the route bindings, read from the paths the dynamic routes were built
+ * at.
  */
 async function writeTemplates(
   scratch: URL,
@@ -73,7 +68,6 @@ async function writeTemplates(
   return bindings
 }
 
-/** The ids of each collection's entries in `content`. */
 function entryIds(content: Content) {
   const ids: Record<string, string[]> = {}
   for (const key of Object.keys(content)) {
@@ -84,8 +78,9 @@ function entryIds(content: Content) {
 }
 
 /**
- * routes.json, from rendering every page with the Node renderer. A page that renders differently
- * from the real build derives something from a read the editor can't reproduce.
+ * Renders every page to record its dependencies. A page that renders
+ * differently from the real build derives something from a read that the editor
+ * can't reproduce, so it gets a warning.
  */
 async function writeRoutes(
   dir: URL,
@@ -163,7 +158,7 @@ export async function finishBuild({
     () => logger.warn(ADMIN_MISSING),
   )
 
-  // The content files in the bucket layout, so dist/ is a complete site.
+  // So dist/ is a complete bucket.
   const files = folderBackend(fileURLToPath(dir))
   for (const key of await repo.list(CONTENT))
     await files.write(key, (await repo.read(key))!)

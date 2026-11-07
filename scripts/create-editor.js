@@ -1,5 +1,6 @@
-// Writes /_gratis/auth/<username>.json: the editor key from .env encrypted with a password.
-// The password is GRATIS_EDITOR_PASSWORD, generated into .env on first run. Nothing secret is printed.
+// Writes /_gratis/auth/<username>.json: the editor key from .env encrypted with
+// a password. The password is GRATIS_EDITOR_PASSWORD, generated into .env on
+// first run. Nothing secret is printed.
 //
 //   node --env-file=.env scripts/create-editor.js admin
 

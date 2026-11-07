@@ -1,5 +1,5 @@
-// Creates the bucket and one editor IAM user. Safe to rerun: every step converges.
-// The editor's access key is written to .env, never printed.
+// Creates the bucket and one editor IAM user. Safe to rerun: every step
+// converges. The editor's access key is written to .env, never printed.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 
@@ -153,7 +153,8 @@ await iam.send(
   }),
 )
 
-// .env holds one editor key: this site's. A key of another user (a previous site) is replaced.
+// .env holds one editor key: this site's. A key of another user (a previous
+// site) is replaced.
 const { AccessKeyMetadata: keys } = await iam.send(
   new ListAccessKeysCommand({ UserName: editorUser }),
 )

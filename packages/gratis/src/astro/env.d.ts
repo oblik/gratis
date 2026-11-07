@@ -1,4 +1,5 @@
-// `.astro` components and `astro:content`, which Vite resolves when it loads `gratis/astro`.
+// `.astro` components and `astro:content`, which Vite resolves when it loads
+// `gratis/astro`.
 /// <reference types="astro/client" />
 
 declare module '*.astro' {

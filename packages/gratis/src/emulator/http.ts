@@ -1,8 +1,3 @@
-// The S3 subset the admin uses, over HTTP (notes/astro.md), so the admin runs its one code path
-// locally and only the endpoint differs. Only the wire format is here: ETags and conditional
-// writes are objects.ts. Signatures aren't checked. A connect-style handler, so it mounts as Vite
-// middleware or on a plain server.
-
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { ConflictError } from '../core/storage.ts'
@@ -12,20 +7,24 @@ import { createObjects, type StoredBytes } from './objects.ts'
 
 export interface EmulatorOptions {
   /**
-   * Also act as the S3 website endpoint for reads: `/` and `/dir/` serve index.html, `/dir`
-   * redirects to `/dir/`, and a missing object serves 404.html.
+   * Also act as the S3 website endpoint for reads: `/` and `/dir/` serve
+   * index.html, `/dir` redirects to `/dir/`, and a missing object serves
+   * 404.html.
    */
   website?: boolean
 }
 
-/** Without `next`, a missing object is a 404; with it, the request passes on, as in dev. */
+/**
+ * Signatures aren't checked. Without `next`, a missing object is a 404; with
+ * it, the request passes on, as in dev.
+ */
 export function createEmulator(
   backend: Backend,
   { website = false }: EmulatorOptions = {},
 ) {
   const objects = createObjects(backend)
 
-  /** ListObjectsV2, in one page: Gratis lists folders of a few dozen entries. */
+  /** In one page: Gratis lists folders of a few dozen entries. */
   async function list(res: ServerResponse, prefix: string) {
     const keys = await objects.list(prefix)
     send(
@@ -36,7 +35,6 @@ export function createEmulator(
     )
   }
 
-  /** GetObject and HeadObject, falling back to `next` or, under `website`, 404.html. */
   async function get(
     req: IncomingMessage,
     res: ServerResponse,
@@ -54,7 +52,6 @@ export function createEmulator(
     serve(req, res, 404, '404.html', page)
   }
 
-  /** The object a read serves, with the website endpoint's index.html and folder redirect. */
   async function lookup(
     key: string,
     pathname: string,
@@ -73,7 +70,6 @@ export function createEmulator(
     return null
   }
 
-  /** PutObject, with If-Match and If-None-Match: * for optimistic locking. */
   async function put(req: IncomingMessage, res: ServerResponse, key: string) {
     const ifMatch = req.headers['if-match']
     const ifNoneMatch = req.headers['if-none-match'] === '*' ? '*' : undefined
@@ -89,7 +85,6 @@ export function createEmulator(
     }
   }
 
-  /** DeleteObject. */
   async function remove(res: ServerResponse, key: string) {
     await objects.delete(key)
     send(res, 204)
@@ -103,7 +98,8 @@ export function createEmulator(
     const { pathname, searchParams } = new URL(req.url!, 'http://localhost')
     const key = decodeURIComponent(pathname).slice(1)
     try {
-      // ListObjectsV2 is on the path-style endpoint, which is the origin's root.
+      // ListObjectsV2 is on the path-style endpoint, which is the origin's
+      // root.
       if (
         req.method === 'GET' &&
         key === '' &&
@@ -126,7 +122,6 @@ export function createEmulator(
   }
 }
 
-/** An object's body, with its ETag; 304 when the client already has it. */
 function serve(
   req: IncomingMessage,
   res: ServerResponse,

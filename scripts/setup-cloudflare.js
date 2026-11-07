@@ -1,6 +1,7 @@
-// Puts the bucket behind Cloudflare: a proxied CNAME to the S3 website endpoint, and a
-// Configuration Rule setting SSL to Flexible for this hostname only (the website endpoint is
-// HTTP-only). The zone-wide SSL mode is not touched. Safe to rerun.
+// Puts the bucket behind Cloudflare: a proxied CNAME to the S3 website
+// endpoint, and a Configuration Rule setting SSL to Flexible for this hostname
+// only (the website endpoint is HTTP-only). The zone-wide SSL mode is not
+// touched. Safe to rerun.
 //
 //   node --env-file=.env scripts/setup-cloudflare.js [--dry-run]
 
@@ -69,7 +70,8 @@ if (cname?.content === record.content && cname.proxied) {
   )
 }
 
-// Configuration Rule, in the zone's http_config_settings entry point, other rules left as they are.
+// Configuration Rule, in the zone's http_config_settings entry point, other
+// rules left as they are.
 const rule = {
   ref: RULE_REF,
   description: `gratis: Flexible SSL for ${bucket} (S3 website endpoints are HTTP-only)`,
