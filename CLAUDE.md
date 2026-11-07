@@ -19,7 +19,7 @@ A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
     - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator over the repo files)
     - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state
     - the CLI: `deploy`, `pull`, `preview`
-  - `emulator/`: the S3 subset over HTTP, with folder, loader-files and in-memory backends
+  - `emulator/`: the S3 subset in three layers: `backends.ts` (bytes in memory or a folder; `astro/dev.ts` adds the repo files), `objects.ts` (ETags and conditional writes, and `emulatedStorage` for core in process), `http.ts` (the wire format and the website endpoint)
   - `admin/`: the React SPA; `session.ts` holds the login, everything else is views
 - `examples/basic/`: the demo site
 - `scripts/`: setup-aws, create-editor, setup-cloudflare, teardown, e2e-edit, the prototype of `gratis init`; they read credentials from the gitignored `.env`

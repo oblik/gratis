@@ -35,9 +35,11 @@ Stripping markers out of a single marked build was rejected: it means re-seriali
 Locally the admin talks to a small HTTP server that implements the S3 subset the admin uses: get, put, delete, head, ETags, conditional writes and listing a folder.
 
 - In `astro dev` it writes entries straight to the loaders' files and Astro re-renders. Auth is switched off.
-- For `gratis preview` and the tests, it serves `dist/`, or a map in memory, and answers like the bucket's website endpoint.
+- For `gratis preview` it serves `dist/`, and answers like the bucket's website endpoint.
 
 It's HTTP rather than a JavaScript storage interface on purpose: the admin has exactly one code path, and only the endpoint and the credentials differ between a laptop and production. A storage interface with two implementations would leave the production path untested locally. It's a command of Gratis's own rather than `astro preview` because `astro preview` gives integrations no hook and drops the project's Vite plugins.
+
+The tests are the one exception. The save flow's tests run core against the emulator's object layer in process, which is where ETags and conditional writes live, so they need no server and can make any single write fail. A separate test drives the S3 client through the HTTP layer, so the admin's own path stays covered.
 
 ## Deploy and pull
 
