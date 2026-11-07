@@ -76,6 +76,12 @@ export function validate(
   return errors
 }
 
+/** The fields whose values differ between two versions of an entry. */
+export const changedFields = (before: Fields, after: Fields) =>
+  [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+    (field) => !equal(before[field], after[field]),
+  )
+
 /** Structural equality of field values. */
 export function equal(a: unknown, b: unknown): boolean {
   if (a === b) return true

@@ -18,8 +18,8 @@ import {
   templateId,
   templateKey,
   TEMPLATES,
-  type Page,
 } from '../core/bucket.ts'
+import { listPages, type Routes } from '../core/routes.ts'
 import {
   sourcePath,
   type Collection,
@@ -114,52 +114,37 @@ async function writeRoutes(
   ids: Record<string, string[]>,
   logger: AstroIntegrationLogger,
 ) {
+  const built = Object.fromEntries(
+    [...assets].map(([pattern, [url]]) => [pattern, unixPath(dir, url)]),
+  )
+  const { pages, unbound } = listPages(built, schema.routes, ids)
+  for (const pattern of unbound)
+    logger.warn(
+      `${pattern}: only dynamic routes over a Gratis collection's ids are supported; it won't be editable`,
+    )
+
   const { DOMParser } = new JSDOM('').window
   const normalize = (html: string) =>
     render(html, { content: {} }, { DOMParser }).html
-  const pages: Record<string, Page> = {}
   const updated = new Date().toISOString()
-  const add = async (
-    path: string,
-    template: string,
-    file: string,
-    entry?: string,
-  ) => {
+  for (const [path, page] of Object.entries(pages)) {
     const { html, deps } = render(
-      await readFile(new URL(templateKey(template), dir), 'utf8'),
-      { content, entry },
+      await readFile(new URL(templateKey(page.template), dir), 'utf8'),
+      { content, entry: page.entry },
       { DOMParser },
     )
-    const built = await readFile(new URL(file, dir), 'utf8').catch(() => null)
-    if (built == null) logger.warn(`${path}: the build has no ${file}`)
-    else if (html !== normalize(built))
+    const file = await readFile(new URL(page.file, dir), 'utf8').catch(
+      () => null,
+    )
+    if (file == null) logger.warn(`${path}: the build has no ${page.file}`)
+    else if (html !== normalize(file))
       logger.warn(
         `${path}: rendering the template doesn't reproduce the built page; edits to it may differ from a build`,
       )
-    pages[path] = { template, file, ...(entry && { entry }), deps, updated }
+    Object.assign(page, { deps, updated })
   }
-  for (const [pattern, urls] of assets) {
-    const id = templateId(pattern)
-    const binding = schema.routes[id]
-    if (binding) {
-      for (const entry of ids[binding.collection]) {
-        const at = (s: string) => s.replace(`[${binding.param}]`, entry)
-        await add(
-          at(id),
-          id,
-          at(binding.file),
-          entryKey(binding.collection, entry),
-        )
-      }
-    } else if (pattern.includes('[')) {
-      logger.warn(
-        `${pattern}: only dynamic routes over a Gratis collection's ids are supported; it won't be editable`,
-      )
-    } else {
-      await add(pattern, id, unixPath(dir, urls[0]))
-    }
-  }
-  await write(new URL(ROUTES, dir), json({ pages, _pending: [] }))
+  const routes: Routes = { pages, _pending: [] }
+  await write(new URL(ROUTES, dir), json(routes))
   return Object.keys(pages).length
 }
 

@@ -2,9 +2,9 @@ import { getRouteApi, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { entryKey, isEntryId } from '../../core/bucket.ts'
+import { affectedBy } from '../../core/routes.ts'
 import { emptyFields } from '../../core/schema.ts'
 import {
-  affectedBy,
   createEntry,
   deleteEntry,
   readEntry,
@@ -27,7 +27,7 @@ export function CollectionEntry() {
   const [confirming, setConfirming] = useState(false)
   const [message, setMessage] = useState<StatusMessage | null>(null)
 
-  const { own, others } = affectedBy(site, key)
+  const { own, others } = affectedBy(site.routes, key)
   async function remove() {
     setConfirming(false)
     try {

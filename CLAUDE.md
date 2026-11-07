@@ -10,7 +10,8 @@ A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
 
 - `packages/gratis/src/`
   - `core/`: framework-free, runs in the browser and in Node; `astro/` and `admin/` import it and it imports neither
-    - `schema.ts` and `bucket.ts`: the shapes of `schema.json` and `routes.json`, and the bucket layout
+    - `schema.ts` and `bucket.ts`: the shape of `schema.json`, and the bucket layout
+    - `routes.ts`: `routes.json` and the pure questions about it: which pages a site or an entry has, which pages an edit re-renders
     - `template/`: `sentinels.ts` (the template language: formats and parses every sentinel and marker), `render.ts` (`render()`, pure and DOM-based) and `query.ts`
     - `storage.ts` (the S3 client and object cache), `site.ts` (load and the save flow), `auth.ts`
   - `astro/`

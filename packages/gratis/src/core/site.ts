@@ -13,10 +13,9 @@ import {
   ROUTES,
   SCHEMA,
   templateKey,
-  type Page,
-  type Routes,
 } from './bucket.ts'
-import { equal, type Fields, type Schema } from './schema.ts'
+import { dependents, entryPages, ownPages, type Routes } from './routes.ts'
+import { changedFields, type Fields, type Schema } from './schema.ts'
 import type { Cache } from './storage.ts'
 import { render, type Content, type Dom } from './template/render.ts'
 
@@ -83,33 +82,6 @@ async function readContent(site: Site): Promise<Content> {
   return Object.fromEntries(keys.map((key, i) => [key, entries[i].fields]))
 }
 
-/** Pages that read `key`, or that query its collection by one of `fields` (all fields: any query). */
-function dependents(site: Site, key: string, fields?: string[]) {
-  const { collection } = parseKey(key)
-  return Object.keys(site.routes.pages).filter((path) => {
-    const { deps } = site.routes.pages[path]
-    const queried = deps.collections[collection]
-    return (
-      deps.entries.includes(key) ||
-      (queried && (!fields || queried.some((field) => fields.includes(field))))
-    )
-  })
-}
-
-const ownPages = (site: Site, key: string) =>
-  Object.keys(site.routes.pages).filter(
-    (path) => site.routes.pages[path].entry === key,
-  )
-
-/** What deleting an entry touches: its own pages, deleted, and the others, re-rendered. */
-export function affectedBy(site: Site, key: string) {
-  const own = ownPages(site, key)
-  return {
-    own,
-    others: dependents(site, key).filter((path) => !own.includes(path)),
-  }
-}
-
 /** Writes routes.json with `pending` queued, conditional on the version last read. */
 async function writeRoutes(site: Site, pending: string[]) {
   await site.objects.put(ROUTES, json({ ...site.routes, _pending: pending }), {
@@ -174,12 +146,9 @@ export function saveEntry(
 ) {
   const file = contentKey(key)
   const before: Fields = JSON.parse(site.objects.peek(file)?.text ?? '{}')
-  const changed = [
-    ...new Set([...Object.keys(before), ...Object.keys(fields)]),
-  ].filter((field) => !equal(before[field], fields[field]))
   return commit(
     site,
-    dependents(site, key, changed),
+    dependents(site.routes, key, changedFields(before, fields)),
     () =>
       site.objects
         .put(file, json(fields), {
@@ -190,23 +159,6 @@ export function saveEntry(
     { DOMParser },
     onPage,
   )
-}
-
-/** The pages a new entry gets: one per route bound to its collection. */
-function pagesOf(site: Site, collection: string, id: string) {
-  const pages: Record<string, Page> = {}
-  for (const [template, binding] of Object.entries(site.schema.routes)) {
-    if (binding.collection !== collection) continue
-    const at = (s: string) => s.replace(`[${binding.param}]`, id)
-    pages[at(template)] = {
-      template,
-      file: at(binding.file),
-      entry: entryKey(collection, id),
-      deps: { entries: [entryKey(collection, id)], collections: {} },
-      updated: '',
-    }
-  }
-  return pages
 }
 
 /** Creates an entry with a page per route bound to its collection, and re-renders the pages that query it. */
@@ -223,12 +175,12 @@ export async function createEntry(
       `"${id}" isn't a valid id: use lowercase letters, digits and dashes`,
     )
   const key = entryKey(collection, id)
-  const pages = pagesOf(site, collection, id)
+  const pages = entryPages(site.schema.routes, collection, id)
   Object.assign(site.routes.pages, pages)
   try {
     return await commit(
       site,
-      [...Object.keys(pages), ...dependents(site, key)],
+      [...Object.keys(pages), ...dependents(site.routes, key)],
       async () => {
         // An existing entry of the same id fails the write instead of being overwritten.
         await site.objects.put(contentKey(key), json(fields), {
@@ -263,12 +215,12 @@ export function deleteEntry(
   onPage?: OnPage,
 ) {
   const { collection, id } = parseKey(key)
-  const own = ownPages(site, key)
+  const own = ownPages(site.routes, key)
   const files = own.map((path) => site.routes.pages[path].file)
   for (const path of own) delete site.routes.pages[path]
   return commit(
     site,
-    dependents(site, key),
+    dependents(site.routes, key),
     async () => {
       await site.objects.delete(contentKey(key))
       site.entries[collection] = site.entries[collection].filter(
