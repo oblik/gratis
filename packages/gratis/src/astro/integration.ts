@@ -5,7 +5,8 @@ import type { AstroIntegration } from 'astro'
 import { createEmulator } from '../emulator/index.ts'
 import { ADMIN_MISSING, adminDist, finishBuild } from './build.ts'
 import { devBackend } from './dev.ts'
-import { isTemplateMode, state } from './template.ts'
+import { state } from './state.ts'
+import { isTemplateMode } from './template-mode.ts'
 
 export default function gratis(): AstroIntegration {
   let root: URL

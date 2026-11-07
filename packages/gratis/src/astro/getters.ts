@@ -12,8 +12,7 @@ import {
 } from 'astro:content'
 
 import { runQuery, type Query } from '../core/template/query.ts'
-import { formatValue, type ListRef } from '../core/template/sentinels.ts'
-import { isTemplateMode, LIST, placeholderId } from './template.ts'
+import { isTemplateMode, placeholderList } from './template-mode.ts'
 
 type Entry<C extends CollectionKey> = {
   id: string
@@ -35,30 +34,13 @@ export async function getEntry<C extends CollectionKey>(
 // The entries of a collection that match `query`, which is all the filtering a page may do: the
 // admin re-runs it when it renders the page.
 //
-// In template mode it is one placeholder entry, which `Each` replaces with its item and which,
-// read outside an `Each`, is the page's own entry. Its id lands in the params of a dynamic route.
+// In the template pass it is one placeholder entry (template-mode.ts).
 export async function getCollection<C extends CollectionKey>(
   collection: C,
   query: Query = {},
 ): Promise<Entry<C>[]> {
-  if (isTemplateMode()) {
-    const id = placeholderId(String(collection))
-    const entry = new Proxy(
-      {},
-      {
-        get: (_, key) =>
-          key === 'id'
-            ? id
-            : key === 'collection'
-              ? collection
-              : typeof key === 'string'
-                ? formatValue({ scope: 'route', field: key })
-                : undefined,
-      },
-    )
-    const list: ListRef = { collection: String(collection), query }
-    return Object.assign([entry], { [LIST]: list }) as Entry<C>[]
-  }
+  if (isTemplateMode())
+    return placeholderList(String(collection), query) as Entry<C>[]
   const entries = (await astroGetCollection(collection)).map(
     (entry: { id: string; data: unknown }) => ({
       id: entry.id,

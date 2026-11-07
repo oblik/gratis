@@ -1,19 +1,16 @@
 ---
-import { formatMarker } from '../core/template/sentinels.ts'
-import { listOf, valueOf } from './template.ts'
+import { ifBlock } from './template-mode.ts'
 
-// In template mode `when` is a sentinel, which the marker carries.
+// Its content when `when` is truthy; in the template pass, always, between markers.
 const { when } = Astro.props
-const value = valueOf(when)
-if (listOf(when))
-  throw new Error('gratis: <If> over a list is not supported yet; use a field')
+const block = ifBlock(when)
 ---
 
-{value ? (
+{block ? (
   <>
-    <Fragment set:html={formatMarker({ kind: 'if', value })} />
+    <Fragment set:html={block.start} />
     <slot />
-    <Fragment set:html={formatMarker({ kind: 'end', of: 'if' })} />
+    <Fragment set:html={block.end} />
   </>
 ) : when ? (
   <slot />

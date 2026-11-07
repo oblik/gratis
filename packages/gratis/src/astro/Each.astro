@@ -1,30 +1,15 @@
 ---
-import { formatMarker, formatValue } from '../core/template/sentinels.ts'
-import { listOf, valueOf } from './template.ts'
+import { eachBlock } from './template-mode.ts'
 
-// In template mode `of` is a query and the slot renders one placeholder item between the markers;
-// in real mode it runs once per item.
+// Once per item; in the template pass, once for a placeholder item, between markers.
 const { of } = Astro.props
-const list = listOf(of)
-if (!list && valueOf(of))
-  throw new Error(
-    'gratis: <Each> over a field is not supported yet; list a collection with getCollection',
-  )
-const placeholder = new Proxy(
-  {},
-  {
-    get: (_, field) =>
-      typeof field === 'string'
-        ? formatValue({ scope: 'item', field })
-        : undefined,
-  },
-)
-const items = list ? [placeholder] : (of ?? [])
+const block = eachBlock(of)
+const items = block ? block.items : (of ?? [])
 const rendered = await Promise.all(
   items.map((item) => Astro.slots.render('default', [item])),
 )
 ---
 
-{list && <Fragment set:html={formatMarker({ kind: 'each', list })} />}
+{block && <Fragment set:html={block.start} />}
 <Fragment set:html={rendered.join('')} />
-{list && <Fragment set:html={formatMarker({ kind: 'end', of: 'each' })} />}
+{block && <Fragment set:html={block.end} />}

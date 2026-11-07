@@ -24,7 +24,8 @@ import type { RouteBinding, Schema } from '../core/schema.ts'
 import { render, type Content } from '../core/template/render.ts'
 import { folderBackend } from '../emulator/index.ts'
 import { readContent, repoContent } from './repo.ts'
-import { PLACEHOLDER_ID, state } from './template.ts'
+import { state } from './state.ts'
+import { inTemplateMode, routeBinding } from './template-mode.ts'
 
 export const adminDist = new URL('../../dist/admin/', import.meta.url)
 export const ADMIN_MISSING =
@@ -38,20 +39,17 @@ async function write(url: URL, text: string | Uint8Array) {
 const unixPath = (from: URL, to: URL) =>
   relative(fileURLToPath(from), fileURLToPath(to)).split('\\').join('/')
 
-/** The template pass: the same build again with GRATIS_MODE=template, into `scratch`. */
+/** The template pass (template-mode.ts): the same build again, into `scratch`. */
 async function buildTemplates(root: URL, scratch: URL) {
-  process.env.GRATIS_MODE = 'template'
-  try {
-    const { build } = await import('astro')
-    await build({
+  const { build } = await import('astro')
+  await inTemplateMode(() =>
+    build({
       root: fileURLToPath(root),
       outDir: fileURLToPath(scratch),
       cacheDir: fileURLToPath(new URL('node_modules/.astro/gratis/', root)),
       logLevel: 'warn',
-    })
-  } finally {
-    delete process.env.GRATIS_MODE
-  }
+    }),
+  )
   return state().templateRoutes!
 }
 
@@ -69,15 +67,8 @@ async function writeTemplates(
   for (const [pattern, [url]] of templateRoutes) {
     const id = templateId(pattern)
     await write(new URL(templateKey(id), dir), await readFile(url))
-    const file = unixPath(scratch, url)
-    const collection = file.match(PLACEHOLDER_ID)?.[1]
-    const param = id.match(/\[(\w+)\]/)?.[1]
-    if (collection && param)
-      bindings[id] = {
-        collection,
-        param,
-        file: file.replace(PLACEHOLDER_ID, `[${param}]`),
-      }
+    const binding = routeBinding(id, unixPath(scratch, url))
+    if (binding) bindings[id] = binding
   }
   return bindings
 }

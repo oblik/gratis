@@ -15,7 +15,7 @@ import type { Routes } from '../core/routes.ts'
 import type { Schema } from '../core/schema.ts'
 import { memoryBackend, orNull, type Backend } from '../emulator/index.ts'
 import { repoContent } from './repo.ts'
-import { state } from './template.ts'
+import { state } from './state.ts'
 
 const encode = (text: string) => new TextEncoder().encode(text)
 

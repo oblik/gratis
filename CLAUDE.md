@@ -18,7 +18,8 @@ A pnpm workspace: `pnpm build`, `pnpm test`, `pnpm run deploy`.
   - `astro/`
     - the integration (`gratis`): `integration.ts` (hooks), `build.ts` (the template pass and `_gratis/`), `dev.ts` (the emulator's backend in dev)
     - `repo.ts`: the repo's content files under the bucket's content keys, the one mapping between the two layouts; the loaders, the build, dev and pull all go through it
-    - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`; `template.ts` is the template pass's state
+    - `gratis/astro`: `collection.ts` (`defineCollection`, loaders), `fields.ts`, `getters.ts`, `Each`, `If`
+    - `template-mode.ts`: everything that differs in the template pass, in the order the pass happens; `state.ts` is what the hooks and the loaders share
     - the CLI (`cli.ts`): `deploy`, `pull` (`pull.ts`), `preview`
   - `emulator/`: the S3 subset in three layers: `backends.ts` (bytes in memory or a folder; `astro/repo.ts` is the repo's), `objects.ts` (ETags and conditional writes, and `emulatedStorage` for core in process), `http.ts` (the wire format and the website endpoint)
   - `admin/`: the React SPA; `session.ts` holds the login, everything else is views

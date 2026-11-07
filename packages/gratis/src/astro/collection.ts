@@ -8,10 +8,10 @@ import { z } from 'astro/zod'
 
 import { parseKey } from '../core/bucket.ts'
 import type { Collection } from '../core/schema.ts'
-import { formatValue } from '../core/template/sentinels.ts'
 import { zodSchemas, type FieldConfig, type Shape } from './fields.ts'
 import { readContent, repoContent } from './repo.ts'
-import { isTemplateMode, state } from './template.ts'
+import { state } from './state.ts'
+import { anyFields, isTemplateMode, singleEntry } from './template-mode.ts'
 
 export const file = (path: string) => ({ kind: 'file' as const, path })
 
@@ -40,10 +40,9 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
   const source =
     loader.kind === 'file' ? loader.path : loader.base.replace(/\/?$/, '/')
 
-  // In template mode the entry holds sentinels, so every field accepts anything. The type is the
-  // real one either way: pages are written against real entries.
+  // The type is the real one either way: pages are written against real entries.
   const schema = (isTemplateMode()
-    ? z.object(Object.fromEntries(Object.keys(fields).map((k) => [k, z.any()])))
+    ? anyFields(Object.keys(fields))
     : z.object(
         Object.fromEntries(
           Object.entries(fields).map(([k, f]) => [k, zodSchemas[f.type]()]),
@@ -77,15 +76,9 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
         const sync = async () => {
           store.clear()
           if (isTemplateMode()) {
-            // A single holds sentinels; a collection stores nothing, as getCollection returns its
-            // placeholder.
+            // A collection stores nothing: getCollection returns its placeholder.
             if (single) {
-              const data = Object.fromEntries(
-                Object.keys(fields).map((field) => [
-                  field,
-                  formatValue({ scope: 'entry', key: name, field }),
-                ]),
-              )
+              const data = singleEntry(name, Object.keys(fields))
               store.set({ id: name, data: await parseData({ id: name, data }) })
             }
             return
