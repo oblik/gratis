@@ -135,7 +135,10 @@ export async function finishBuild({
   assets: Map<string, URL[]>
   logger: AstroIntegrationLogger
 }) {
-  // A folder of its own: Astro empties it, and the local bucket is a sibling.
+  // A folder of its own, since Astro empties it and the local bucket is a
+  // sibling. Nothing reads it once the templates are in dir, and its leftover
+  // placeholder pages would pass for real output, so a successful build
+  // removes it. A failed one keeps it to debug from.
   const scratch = new URL('.gratis/build/', root)
   const templateRoutes = await buildTemplates(root, scratch)
   const bindings = await writeTemplates(scratch, dir, templateRoutes)
@@ -164,5 +167,6 @@ export async function finishBuild({
   for (const key of await repo.list(CONTENT))
     await files.write(key, (await repo.read(key))!)
 
+  await rm(scratch, { recursive: true, force: true })
   logger.info(`${templateRoutes.size} template(s), ${pages} page(s)`)
 }
