@@ -61,6 +61,18 @@ Gratis's bet is different: depend only on things that already have, or can reaso
 
 A Gratis site has no scheduled maintenance. If nobody touches it for ten years, it keeps serving and it keeps being editable. The only code that can break is Gratis's own renderer, and that risk is bounded by design (see [editing](notes/editing.md)).
 
+## Try it locally
+
+No bucket needed: the preview serves the built demo site as if it were one.
+
+1. `pnpm install && pnpm build`
+2. `pnpm --filter example-basic preview`
+3. Open http://localhost:4321/admin/, log in as `admin` / `gratis-preview` and edit something
+4. In another terminal, `pnpm --filter example-basic pull` brings the edits into `examples/basic/src/data/`, as `gratis pull` would from a real bucket
+5. `git diff` shows what changed
+
+Running `pnpm build` again resets the preview to the repo's content.
+
 ---
 
 See [CLAUDE.md](CLAUDE.md) for the notes and where things are in the code.

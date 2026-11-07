@@ -5,6 +5,10 @@
 //
 // Credentials and region come from the environment: AWS_ACCESS_KEY_ID,
 // AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN (optional) and AWS_REGION.
+//
+// --endpoint <url> replaces --bucket with any path-style bucket URL, such as
+// a running `gratis preview` at http://localhost:4321. Credentials then
+// default to dummy ones, which only the emulator accepts.
 import { readdir, readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join, relative } from 'node:path'
@@ -29,16 +33,17 @@ const {
   allowPositionals: true,
   options: {
     bucket: { type: 'string' },
+    endpoint: { type: 'string' },
     root: { type: 'string', default: process.cwd() },
     port: { type: 'string', default: '4321' },
   },
 })
 if (
-  !(['deploy', 'pull'].includes(command!) && args.bucket) &&
+  !(['deploy', 'pull'].includes(command!) && (args.bucket || args.endpoint)) &&
   command !== 'preview'
 ) {
   console.error(
-    'usage: gratis <deploy|pull> --bucket <name> [--root <dir>]\n       gratis preview [--root <dir>] [--port <port>]',
+    'usage: gratis <deploy|pull> (--bucket <name> | --endpoint <url>) [--root <dir>]\n       gratis preview [--root <dir>] [--port <port>]',
   )
   process.exit(1)
 }
@@ -46,11 +51,12 @@ if (
 const root = args.root!
 const dist = join(root, 'dist')
 
-function bucketStorage(bucket: string): Storage {
+function bucketStorage(): Storage {
+  const local = args.endpoint ? 'local' : undefined
   const {
-    AWS_REGION: region,
-    AWS_ACCESS_KEY_ID: accessKeyId,
-    AWS_SECRET_ACCESS_KEY: secretAccessKey,
+    AWS_REGION: region = local,
+    AWS_ACCESS_KEY_ID: accessKeyId = local,
+    AWS_SECRET_ACCESS_KEY: secretAccessKey = local,
     AWS_SESSION_TOKEN: sessionToken,
   } = process.env
   if (!region || !accessKeyId || !secretAccessKey)
@@ -58,7 +64,9 @@ function bucketStorage(bucket: string): Storage {
       'set AWS_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY',
     )
   return createStorage({
-    endpoint: `https://s3.${region}.amazonaws.com/${bucket}`,
+    endpoint:
+      args.endpoint?.replace(/\/+$/, '') ??
+      `https://s3.${region}.amazonaws.com/${args.bucket}`,
     region,
     accessKeyId,
     secretAccessKey,
@@ -107,7 +115,7 @@ async function upload(storage: Storage) {
         },
       )
   }
-  console.log(`uploaded ${uploaded} file(s) to ${args.bucket}`)
+  console.log(`uploaded ${uploaded} file(s) to ${args.bucket ?? args.endpoint}`)
 }
 
 /**
@@ -145,7 +153,7 @@ async function preview() {
 if (command === 'preview') {
   await preview()
 } else {
-  const storage = bucketStorage(args.bucket!)
+  const storage = bucketStorage()
   await pull(storage, pathToFileURL(join(root, '/')))
   if (command === 'deploy') {
     const { build } = await import('astro')
