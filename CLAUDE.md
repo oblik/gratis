@@ -17,8 +17,8 @@ Non-goals:
 
 A pnpm workspace:
 
-- Commands: `pnpm build`, `pnpm test`, `pnpm run deploy`
-- Tests sit next to their module as `<name>.test.ts` (Vitest).
+- Commands: `pnpm build`, `pnpm test`, `pnpm test:e2e`, `pnpm run deploy`
+- Tests sit next to their module as `<name>.test.ts` (Vitest). The slower end-to-end ones are in `e2e/`, and only `pnpm test:e2e` runs them.
 - `packages/gratis/src/`:
   - `core/`: framework-free, runs in the browser and in Node, imports none of the folders below
     - `bucket.ts`: every kind of name
