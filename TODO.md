@@ -2,6 +2,7 @@
 
 Rough order. What's done is whatever the code does; see [CLAUDE.md](CLAUDE.md) for where things are.
 
+- Stable collection order in `schema.json`: the loaders register collections in whatever order Astro runs them, so the order changes between builds and the file shows up as changed. The admin lists collections in this order, so prefer the content config's order if the build can recover it, or else sort by name.
 - `file()` collections
 - Uploads and `image` fields
 - Lexical for rich text
