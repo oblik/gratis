@@ -7,7 +7,7 @@ import { parseKey } from '../core/bucket.ts'
 import type { Collection } from '../core/schema.ts'
 import { zodSchemas, type FieldConfig, type Shape } from './fields.ts'
 import { readContent, repoContent } from './repo.ts'
-import { state } from './state.ts'
+import { register } from './state.ts'
 import { anyFields, isTemplateMode, singleEntry } from './template-mode.ts'
 
 export const file = (path: string) => ({ kind: 'file' as const, path })
@@ -17,6 +17,12 @@ export function glob({ pattern, base }: { pattern: string; base: string }) {
     throw new Error('gratis: glob() supports only the pattern *.json so far')
   return { kind: 'glob' as const, base }
 }
+
+/**
+ * Counts defineCollection calls, which the content config makes in its own
+ * order.
+ */
+let defineCalls = 0
 
 const readable = (key: string) =>
   key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
@@ -34,6 +40,7 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
     throw new Error('gratis: a single needs file()')
   if (!single && loader.kind !== 'glob')
     throw new Error('gratis: a collection needs glob()')
+  const position = defineCalls++
   const source =
     loader.kind === 'file' ? loader.path : loader.base.replace(/\/?$/, '/')
 
@@ -67,7 +74,7 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
             ]),
           ),
         }
-        state().collections[name] = collection
+        register(name, position, collection)
         const root = config.root
         const path = fileURLToPath(new URL(source, root))
         const repo = repoContent(root, () => ({ [name]: collection }))
