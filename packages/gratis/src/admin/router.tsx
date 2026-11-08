@@ -117,6 +117,10 @@ export const router = createRouter({
     ]),
   ]),
   history: createHashHistory(),
+  // A form copies its loaded entry into state once, so a revisit must wait for
+  // a fresh load, not show the last visit's entry while reloading behind it.
+  // Loaders read the object cache, so this costs no requests.
+  defaultGcTime: 0,
 })
 
 declare module '@tanstack/react-router' {
