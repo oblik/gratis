@@ -10,7 +10,7 @@
     {
       "name": "example-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "example-basic", "dev", "--port", "4323"],
+      "runtimeArgs": ["dev", "--port", "4323"],
       "port": 4323
     }
   ]

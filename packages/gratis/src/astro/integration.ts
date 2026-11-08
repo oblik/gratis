@@ -4,7 +4,7 @@ import type { AstroIntegration } from 'astro'
 
 import { createEmulator } from '../emulator/index.ts'
 import { ADMIN_MISSING, adminDist, finishBuild } from './build.ts'
-import { devBackend } from './dev.ts'
+import { ADMIN_FROM_SOURCE, adminFromSource, devBackend } from './dev.ts'
 import { state } from './state.ts'
 import { isTemplateMode } from './template-mode.ts'
 
@@ -19,7 +19,11 @@ export default function gratis(): AstroIntegration {
         updateConfig({ vite: { ssr: { noExternal: ['gratis'] } } })
       },
       'astro:server:setup': async ({ server, logger }) => {
-        await access(adminDist).catch(() => logger.warn(ADMIN_MISSING))
+        const admin = ADMIN_FROM_SOURCE
+          ? await adminFromSource(server.httpServer)
+          : undefined
+        if (admin) server.httpServer?.once('close', () => admin.close())
+        else await access(adminDist).catch(() => logger.warn(ADMIN_MISSING))
         const handle = createEmulator(devBackend({ root, adminDist }), {
           website: true,
         })
@@ -29,6 +33,8 @@ export default function gratis(): AstroIntegration {
           // site's `/` here.
           const list =
             path === '/' && new URLSearchParams(query).get('list-type') === '2'
+          if (admin && path.startsWith('/admin/'))
+            return admin.middlewares(req, res, next)
           if (
             list ||
             path.startsWith('/_gratis/') ||

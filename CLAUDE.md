@@ -17,7 +17,7 @@ Non-goals:
 
 A pnpm workspace:
 
-- Commands: `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm run deploy`
+- Commands: `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm run deploy`
 - TypeScript only, no plain JavaScript, configs and scripts included. Node runs the `.ts` files as they are, so relative imports keep their `.ts` extension.
 - Tests sit next to their module as `<name>.test.ts` (Vitest). The slower end-to-end ones are in `e2e/`, and only `pnpm test:e2e` runs them.
 - `packages/gratis/src/`:
@@ -41,7 +41,7 @@ A pnpm workspace:
 
 To try the admin without a bucket:
 
-- `pnpm --filter example-basic dev`: no login, writes `src/data/`
+- `pnpm dev`: the demo site with the admin served from source, hot-updating as you edit it; no login, writes `src/data/`
 - `pnpm build`, `pnpm --filter example-basic run deploy`, then `pnpm --filter example-basic preview`: `.gratis/bucket/` as the bucket, log in as `admin` / `gratis-preview`, and `pnpm --filter example-basic pull` brings the edits back
 
 ## Notes
@@ -61,4 +61,5 @@ Notes stay high-level, with code only to illustrate.
 ## Comments
 
 - Comment only what the code can't say: why, a non-obvious constraint, a short example.
+- Write comments as connected sentences: link ideas with words like "but", "so", "because" and "then", and give every "it" or "that" one obvious referent. Keep them short by saying less, not by dropping those links.
 - Never point to `notes/`.
