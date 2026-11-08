@@ -9,6 +9,7 @@
 // - files left behind in `.gratis/` that look like real output
 // - `pull` not bringing the bucket's content back into the repo
 // - the preview not serving the site or the admin, or the login not working
+// - an island not hydrating once an editor's save changed its content
 //
 // It runs on a copy of `examples/basic`, so the repo's own example, its
 // content and its local bucket are never touched.
@@ -105,6 +106,37 @@ test('try it locally', { timeout: 120_000 }, async () => {
   await page.getByText(/^Saved\./).waitFor()
   await page.goto(`${origin}/`)
   expect(await page.locator('h1').textContent()).toBe('Saved by an editor')
+
+  // Edit a post that islands show: one rendered only in the browser, which
+  // gets it through its props, and one rendered on the server too, which gets
+  // it as children. A title is a single line, so the newline goes in the body.
+  await page.goto(`${origin}/admin/#/collections/posts/entry/hello-world`)
+  await page.getByLabel('Title').fill('Say "hi" \\ there')
+  await page.getByLabel('Body').fill('First line.\nSecond line.')
+  await page.getByLabel('Featured').uncheck()
+  await page.getByRole('button', { name: 'Save' }).click()
+  await page.getByText(/^Saved\./).waitFor()
+
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto(`${origin}/blog/hello-world/`)
+  // The props are valid JSON, so the island renders, and `featured` is still a
+  // boolean, since the string "false" would show as featured.
+  const facts = page.locator('.post-facts p')
+  await facts.first().waitFor()
+  expect(await facts.allTextContents()).toStrictEqual([
+    'Say "hi" \\ there',
+    '4 words, post 3 of 3',
+  ])
+  // React hydrates the server-rendered island over children that changed
+  // since the build.
+  await page.locator('astro-island[client="load"]:not([ssr])').waitFor()
+  await page.getByRole('button', { name: 'All posts' }).click()
+  await page.getByRole('link', { name: 'Say "hi" \\ there' }).waitFor()
+  expect(errors).toStrictEqual([])
 
   // An editor's upload exists only in the bucket: no deploy can put it back
   // if one wipes the bucket, so it's the canary for that.

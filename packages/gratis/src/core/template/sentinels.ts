@@ -11,6 +11,13 @@
 //
 //   <!--gratis:if route:featured--> … <!--/gratis:if-->
 //   <!--gratis:each query:posts {"sort":"-date"}--> … <!--/gratis:each-->
+//
+// An island's props are JSON, where a value is a sentinel string too. A list
+// there is a single stand-in entry, which keeps the list's query under LIST_KEY
+// (Astro's [type, value] pairs left out):
+//
+//   [{"id": "gratis-placeholder-posts", "title": "{{gratis:route:title}}", …,
+//     "gratis:list": "query:posts {\"sort\":\"-date\"}"}]
 
 import type { Query } from './query.ts'
 
@@ -28,6 +35,8 @@ export type Marker =
   | { kind: 'if'; value: ValueRef }
   | { kind: 'each'; list: ListRef }
   | { kind: 'end'; of: 'if' | 'each' }
+
+export const LIST_KEY = 'gratis:list'
 
 const SENTINEL = /\{\{gratis:([^}]+)\}\}/g
 const PREFIX = '{{gratis:'
@@ -71,14 +80,14 @@ export const replaceValues = (text: string, fill: (ref: ValueRef) => string) =>
  * The query is JSON inside a comment, so `>` is escaped where it could end the
  * comment early.
  */
-const formatList = ({ collection, query }: ListRef) => {
+export const formatList = ({ collection, query }: ListRef) => {
   const json = Object.keys(query).length
     ? ` ${JSON.stringify(query).replace(/>/g, '\\u003e')}`
     : ''
   return `query:${collection}${json}`
 }
 
-function parseList(text: string): ListRef {
+export function parseList(text: string): ListRef {
   const match = text.match(/^query:([^ ]+)(?: (.*))?$/)
   if (!match)
     throw new Error(

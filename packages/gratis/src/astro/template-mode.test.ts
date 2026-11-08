@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
+import { state } from './state.ts'
 import {
   eachBlock,
   ifBlock,
@@ -10,8 +11,24 @@ import {
   singleEntry,
 } from './template-mode.ts'
 
-beforeEach(() => (process.env.GRATIS_MODE = 'template'))
-afterEach(() => delete process.env.GRATIS_MODE)
+beforeEach(() => {
+  process.env.GRATIS_MODE = 'template'
+  state().collections = {
+    posts: {
+      single: false,
+      label: 'Posts',
+      source: 'src/data/posts/',
+      fields: {
+        title: { type: 'text', label: 'Title' },
+        featured: { type: 'boolean', label: 'Featured' },
+      },
+    },
+  }
+})
+afterEach(() => {
+  delete process.env.GRATIS_MODE
+  state().collections = {}
+})
 
 test('inTemplateMode turns the mode on for the build only', async () => {
   delete process.env.GRATIS_MODE
@@ -35,6 +52,40 @@ test("getCollection's placeholder is the page's own entry, with the placeholder 
   expect(post.id).toBe('gratis-placeholder-posts')
   expect(post.collection).toBe('posts')
   expect(post.title).toBe('{{gratis:route:title}}')
+})
+
+// Astro serializes an island's props with Object.entries, and a page may spread
+// an entry, so both see the same fields as reading them by name.
+const readByName = (entry: Record<string, string>) =>
+  Object.fromEntries(Object.keys(entry).map((key) => [key, entry[key]]))
+
+test("the page's own entry lists its fields, and the query of the list it stands for", () => {
+  const [post] = placeholderList('posts', { sort: '-date' })
+  expect(readByName(post)).toStrictEqual({
+    id: 'gratis-placeholder-posts',
+    collection: 'posts',
+    title: '{{gratis:route:title}}',
+    featured: '{{gratis:route:featured}}',
+    'gratis:list': 'query:posts {"sort":"-date"}',
+  })
+  expect(Object.fromEntries(Object.entries(post))).toStrictEqual(
+    readByName(post),
+  )
+  expect({ ...post }).toStrictEqual(readByName(post))
+})
+
+test("an Each's item lists its fields", () => {
+  const [item] = eachBlock(placeholderList('posts', {}))!.items
+  expect(readByName(item)).toStrictEqual({
+    id: '{{gratis:item:id}}',
+    collection: 'posts',
+    title: '{{gratis:item:title}}',
+    featured: '{{gratis:item:featured}}',
+  })
+  expect(Object.fromEntries(Object.entries(item))).toStrictEqual(
+    readByName(item),
+  )
+  expect({ ...item }).toStrictEqual(readByName(item))
 })
 
 test('an Each over a getCollection result renders one placeholder item between markers carrying the query', () => {

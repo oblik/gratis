@@ -8,12 +8,15 @@ import { z } from 'astro/zod'
 import type { RouteBinding } from '../core/schema.ts'
 import type { Query } from '../core/template/query.ts'
 import {
+  formatList,
   formatMarker,
   formatValue,
+  LIST_KEY,
   parseValue,
   type ListRef,
   type ValueRef,
 } from '../core/template/sentinels.ts'
+import { state } from './state.ts'
 
 const MODE = 'GRATIS_MODE'
 
@@ -48,6 +51,9 @@ export const singleEntry = (collection: string, fields: string[]) =>
 const placeholderId = (collection: string) => `gratis-placeholder-${collection}`
 const PLACEHOLDER_ID = /gratis-placeholder-([\w-]+)/
 
+/** Whether `text` has a placeholder entry's id, which is content too. */
+export const hasPlaceholder = (text: string) => PLACEHOLDER_ID.test(text)
+
 /**
  * A getCollection result carries the list it stands for under this symbol, for
  * `Each` to put in its marker. A registered symbol, since the getters and the
@@ -56,31 +62,57 @@ const PLACEHOLDER_ID = /gratis-placeholder-([\w-]+)/
 const LIST = Symbol.for('gratis.list')
 
 /**
+ * An entry whose fields are the sentinels `field` gives. It lists its keys,
+ * `id`, `collection` and the schema's fields, so `Object.entries` and spreading
+ * see them, and Astro can serialize it whole into an island's props. `extra`
+ * sets values of its own, for those keys or for more after them.
+ */
+function standIn(
+  collection: string,
+  field: (name: string) => string,
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  const fields = Object.keys(state().collections[collection]?.fields ?? {})
+  const keys = [
+    ...new Set(['id', 'collection', ...fields, ...Object.keys(extra)]),
+  ]
+  const get = (key: string) =>
+    key === 'collection'
+      ? collection
+      : Object.hasOwn(extra, key)
+        ? extra[key]
+        : field(key)
+  return new Proxy(
+    {},
+    {
+      get: (_, key) => (typeof key === 'string' ? get(key) : undefined),
+      ownKeys: () => keys,
+      getOwnPropertyDescriptor: (_, key) =>
+        typeof key === 'string' && keys.includes(key)
+          ? { value: get(key), enumerable: true, configurable: true }
+          : undefined,
+    },
+  )
+}
+
+/**
  * `getCollection`'s result: one placeholder entry, standing for the list
  * `query` selects. Read outside an `Each`, it is the page's own entry
  * (`{{gratis:route:title}}`). A dynamic route's getStaticPaths puts its id in
  * the params, so the pass builds the route exactly once, at a path that names
- * the collection (routeBinding).
+ * the collection (routeBinding). In an island's props, the list is that entry
+ * alone, so the entry carries the query too.
  */
 export function placeholderList(
   collection: string,
   query: Query,
 ): Record<string, string>[] {
-  const id = placeholderId(collection)
-  const entry = new Proxy<Record<string, string>>(
-    {},
-    {
-      get: (_, key) =>
-        key === 'id'
-          ? id
-          : key === 'collection'
-            ? collection
-            : typeof key === 'string'
-              ? formatValue({ scope: 'route', field: key })
-              : undefined,
-    },
-  )
   const list: ListRef = { collection, query }
+  const entry = standIn(
+    collection,
+    (field) => formatValue({ scope: 'route', field }),
+    { id: placeholderId(collection), [LIST_KEY]: formatList(list) },
+  )
   return Object.assign([entry], { [LIST]: list })
 }
 
@@ -91,16 +123,6 @@ const listOf = (value: unknown) =>
 
 const valueOf = (value: unknown): ValueRef | undefined =>
   typeof value === 'string' ? parseValue(value) : undefined
-
-const placeholderItem = new Proxy<Record<string, string>>(
-  {},
-  {
-    get: (_, field) =>
-      typeof field === 'string'
-        ? formatValue({ scope: 'item', field })
-        : undefined,
-  },
-)
 
 /**
  * What an `Each` over `of` renders in the template pass: its item once, as a
@@ -120,7 +142,11 @@ export function eachBlock(of: unknown) {
   return {
     start: formatMarker({ kind: 'each', list }),
     end: formatMarker({ kind: 'end', of: 'each' }),
-    items: [placeholderItem],
+    items: [
+      standIn(list.collection, (field) =>
+        formatValue({ scope: 'item', field }),
+      ),
+    ],
   }
 }
 

@@ -65,6 +65,21 @@ In Node, the renderer uses jsdom, chosen by round-tripping real Astro output thr
 
 It's heavy, but it runs only at build and deploy time.
 
+## Islands
+
+A framework component in a page (an island) gets content in two ways, and both end up in the HTML the renderer fills:
+
+- Props: Astro writes them into the island's `props` attribute as JSON, so the renderer fills them as JSON. A field that is a whole value keeps its type, so a boolean stays a boolean, and a list becomes one entry per match, because its single stand-in entry carries its query.
+- Children (slots): Astro renders them to HTML inside the island, and they're filled like any other HTML.
+
+So no HTML that a framework renders on the server ever holds content. A save only fills templates and never runs a framework's server renderer, so it couldn't update that HTML, and the island would show the build's content until it hydrates. Content may therefore reach an island's props only when the island is `client:only`, which has no server-rendered HTML, and the build fails for any other island. The error offers the two ways out: make the island `client:only`, or pass the content as children, which keeps it server-rendered because Astro, not the framework, renders it. Emptying a server-rendered island's HTML, or rewriting its `client` to `only` during the build, was rejected: the template would no longer be what Astro builds, and either change depends on how each framework hydrates.
+
+An island's `uid` is a hash of its props, so it goes stale after a save, but only Astro's dev server reads it.
+
+Testing one framework (React) is enough, because Astro writes `props` the same way for every framework, and the hydration markers Vue, Svelte and Solid add to the HTML don't touch the values. Integrations that ship their own state in a `<script>` aren't covered.
+
+If server-rendered islands with editable props are ever needed, the path is rendering components in the browser: bundle each island with its integration's `renderToStaticMarkup` for the save to call. That would add to the renderer rather than change it.
+
 ## The one constraint
 
 Anything derived from a read in JavaScript renders fine in dev and in the build, but can't be reproduced by the editor:

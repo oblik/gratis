@@ -1,5 +1,8 @@
 ---
-import { getCollection, getEntry, If } from 'gratis/astro'
+import { Each, getCollection, getEntry, If } from 'gratis/astro'
+
+import Collapsible from '../../components/Collapsible.tsx'
+import PostFacts from '../../components/PostFacts.tsx'
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts')
@@ -8,6 +11,7 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props
 const site = await getEntry('site')
+const posts = await getCollection('posts', { sort: '-date' })
 ---
 
 <html lang="en">
@@ -30,5 +34,26 @@ const site = await getEntry('site')
       </p>
     </If>
     <p style="white-space: pre-line">{post.body}</p>
+    <PostFacts
+      client:only="react"
+      title={post.title}
+      featured={post.featured}
+      post={post}
+      posts={posts}
+    />
+    <Collapsible client:load summary="All posts">
+      <ul>
+        <Each of={posts}>
+          {(p) => (
+            <li>
+              <a href={`/blog/${p.id}/`}>{p.title}</a>
+              <If when={p.featured}>
+                <strong>Featured</strong>
+              </If>
+            </li>
+          )}
+        </Each>
+      </ul>
+    </Collapsible>
   </body>
 </html>

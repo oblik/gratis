@@ -19,11 +19,16 @@ import {
 } from '../core/bucket.ts'
 import { listPages, routesJson, type Routes } from '../core/routes.ts'
 import type { RouteBinding, Schema } from '../core/schema.ts'
-import { render, type Content } from '../core/template/render.ts'
+import { render, type Content, type Dom } from '../core/template/render.ts'
+import { hasValues } from '../core/template/sentinels.ts'
 import { folderBackend } from '../emulator/index.ts'
 import { readContent, repoContent } from './repo.ts'
 import { state } from './state.ts'
-import { inTemplateMode, routeBinding } from './template-mode.ts'
+import {
+  hasPlaceholder,
+  inTemplateMode,
+  routeBinding,
+} from './template-mode.ts'
 
 export const adminDist = new URL('../../dist/admin/', import.meta.url)
 export const ADMIN_MISSING =
@@ -50,6 +55,45 @@ async function buildTemplates(root: URL, scratch: URL) {
 }
 
 /**
+ * Throws for an island Astro renders on the server with content in its props.
+ * Its framework renders that HTML from the props, and an editor's save, which
+ * only fills templates, can't run that renderer, so the HTML would keep the
+ * build's content. A `client:only` island has no such HTML, and children are
+ * HTML that Astro renders, which saves fill like any other.
+ */
+export function checkIslands(
+  template: string,
+  route: string,
+  { DOMParser }: Dom,
+) {
+  const doc = new DOMParser().parseFromString(template, 'text/html')
+  // Astro puts the children of an island it doesn't render on the server in a
+  // <template>, whose content the DOM keeps apart.
+  const islands = (root: ParentNode): Element[] => [
+    ...root.querySelectorAll('astro-island'),
+    ...[...root.querySelectorAll('template')].flatMap((template) =>
+      islands(template.content),
+    ),
+  ]
+  const invalidIsland = islands(doc).find((island) => {
+    const props = island.getAttribute('props') ?? ''
+    return (
+      island.getAttribute('client') !== 'only' &&
+      (hasValues(props) || hasPlaceholder(props))
+    )
+  })
+  if (!invalidIsland) return
+  // `value` is the directive's argument, like client:media's query, or `true`.
+  const { name, value } = JSON.parse(invalidIsland.getAttribute('opts') ?? '{}')
+  const client = `client:${invalidIsland.getAttribute('client')}${typeof value === 'string' && value ? `="${value}"` : ''}`
+  throw new Error(
+    `gratis: ${route}: <${name} ${client}> gets content through its props, which an editor's save can't render on the server. Either:
+- make it client:only
+- or pass the content as children instead of props: Astro renders that HTML, so saves fill it and it stays server-rendered`,
+  )
+}
+
+/**
  * Returns the route bindings, read from the paths the dynamic routes were built
  * at.
  */
@@ -60,9 +104,12 @@ async function writeTemplates(
 ) {
   await rm(new URL(TEMPLATES, dir), { recursive: true, force: true })
   const bindings: Record<string, RouteBinding> = {}
+  const { DOMParser } = new JSDOM('').window
   for (const [pattern, [url]] of templateRoutes) {
     const id = templateId(pattern)
-    await write(new URL(templateKey(id), dir), await readFile(url))
+    const template = await readFile(url, 'utf8')
+    checkIslands(template, pattern, { DOMParser })
+    await write(new URL(templateKey(id), dir), template)
     const binding = routeBinding(id, unixPath(scratch, url))
     if (binding) bindings[id] = binding
   }
@@ -101,8 +148,13 @@ async function writeRoutes(
     )
 
   const { DOMParser } = new JSDOM('').window
+  // An island's uid is a hash of its props and HTML, so it's stale once the
+  // content changes. Only Astro's dev server reads it, though, so it's left out
+  // of the comparison.
+  const comparable = (html: string) =>
+    html.replace(/(<astro-island\b[^>]*?) uid="[^"]*"/g, '$1')
   const normalize = (html: string) =>
-    render(html, { content: {} }, { DOMParser }).html
+    comparable(render(html, { content: {} }, { DOMParser }).html)
   const updated = new Date().toISOString()
   for (const [path, page] of Object.entries(pages)) {
     const { html, deps } = render(
@@ -114,7 +166,7 @@ async function writeRoutes(
       () => null,
     )
     if (file == null) logger.warn(`${path}: the build has no ${page.file}`)
-    else if (html !== normalize(file))
+    else if (comparable(html) !== normalize(file))
       logger.warn(
         `${path}: rendering the template doesn't reproduce the built page; edits to it may differ from a build`,
       )
