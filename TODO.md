@@ -13,7 +13,10 @@ Rough order. What's done is whatever the code does; see [CLAUDE.md](CLAUDE.md) f
 - Query wrapper type so `.filter()` and `.slice()` after `getCollection` are a type error
 - Markdown entries support
 - `deploy` re-renders pages whose dependencies changed in the bucket during the build
-- `gratis init`
+- `gratis setup`, from the prototype scripts in `scripts/`
+  - S3 and IAM calls through `aws4fetch`, not the AWS SDK: the package already depends on it (80 KB), while the SDK's S3 and IAM clients are about 23 MB
+- Test the emulator against a real S3 bucket: the same tests, skipped without credentials
+- Type-check the example site with `@astrojs/ts-content-mapper` and TypeScript 7 once 7.1 is stable, dropping `astro check` and its pinned TypeScript 6
 
 Maybe later:
 

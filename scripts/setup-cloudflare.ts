@@ -3,36 +3,21 @@
 // only (the website endpoint is HTTP-only). The zone-wide SSL mode is not
 // touched. Safe to rerun.
 //
-//   node --env-file=.env scripts/setup-cloudflare.js [--dry-run]
+//   node --env-file=.env scripts/setup-cloudflare.ts [--dry-run]
 
-import { bucket, cloudflareToken, websiteHost, zone } from './config.js'
+import {
+  cf,
+  findZone,
+  RULE_REF,
+  ruleExpression,
+  type DnsRecord,
+  type Ruleset,
+} from './cloudflare.ts'
+import { bucket, websiteHost } from './config.ts'
 
 const dryRun = process.argv.includes('--dry-run')
-const RULE_REF = 'gratis_flexible_ssl'
 
-async function cf(method, path, body) {
-  const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${cloudflareToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: body && JSON.stringify(body),
-  })
-  const data = await res.json()
-  if (!data.success && !(method === 'GET' && res.status === 404)) {
-    throw new Error(
-      `${method} ${path}: ${res.status} ${JSON.stringify(data.errors)}`,
-    )
-  }
-  return { status: res.status, ...data }
-}
-
-const {
-  result: [{ id: zoneId } = {}],
-} = await cf('GET', `/zones?name=${zone}`)
-if (!zoneId)
-  throw new Error(`zone ${zone} not found; the token needs Zone read on it`)
+const { id: zoneId } = await findZone()
 
 // DNS
 const record = {
@@ -43,7 +28,7 @@ const record = {
   ttl: 1,
   comment: 'gratis',
 }
-const { result: existing } = await cf(
+const { result: existing } = await cf<DnsRecord[]>(
   'GET',
   `/zones/${zoneId}/dns_records?name=${bucket}`,
 )
@@ -75,12 +60,12 @@ if (cname?.content === record.content && cname.proxied) {
 const rule = {
   ref: RULE_REF,
   description: `gratis: Flexible SSL for ${bucket} (S3 website endpoints are HTTP-only)`,
-  expression: `(http.host eq "${bucket}")`,
+  expression: ruleExpression,
   action: 'set_config',
   action_parameters: { ssl: 'flexible' },
   enabled: true,
 }
-const entry = await cf(
+const entry = await cf<Ruleset>(
   'GET',
   `/zones/${zoneId}/rulesets/phases/http_config_settings/entrypoint`,
 )

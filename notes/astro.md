@@ -53,7 +53,7 @@ Once editors have saved, the bucket is the source of truth and the repo copy is 
 
 ## Setup
 
-`gratis init` is meant to do, or print exact instructions for:
+`gratis setup` is meant to do, or print exact instructions for, what lives outside the repo (hence setup rather than init):
 
 1. The bucket, with website hosting, versioning, CORS and a public-read policy.
 2. The IAM users and keys (see [auth](auth.md)).

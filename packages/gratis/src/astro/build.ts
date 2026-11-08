@@ -2,7 +2,9 @@ import { access, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import type { AstroIntegrationLogger } from 'astro'
+// Static: a dynamic import() fails when the site's config is TypeScript, because
+// Astro loads it through a Vite module runner that is closed by build time.
+import { build, type AstroIntegrationLogger } from 'astro'
 import { JSDOM } from 'jsdom'
 
 import {
@@ -36,7 +38,6 @@ const unixPath = (from: URL, to: URL) =>
   relative(fileURLToPath(from), fileURLToPath(to)).split('\\').join('/')
 
 async function buildTemplates(root: URL, scratch: URL) {
-  const { build } = await import('astro')
   await inTemplateMode(() =>
     build({
       root: fileURLToPath(root),

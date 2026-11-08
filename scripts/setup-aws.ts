@@ -20,6 +20,7 @@ import {
   PutBucketWebsiteCommand,
   PutPublicAccessBlockCommand,
   S3Client,
+  type BucketLocationConstraint,
 } from '@aws-sdk/client-s3'
 
 import {
@@ -29,20 +30,24 @@ import {
   siteOrigin,
   websiteHost,
   websiteOrigin,
-} from './config.js'
+} from './config.ts'
 
 const s3 = new S3Client({ region })
 const iam = new IAMClient({ region })
 
-async function exists(fn) {
+async function exists(fn: () => Promise<unknown>) {
   try {
     await fn()
     return true
   } catch (e) {
+    const { name, $metadata } = e as {
+      name?: string
+      $metadata?: { httpStatusCode?: number }
+    }
     if (
-      e.name === 'NotFound' ||
-      e.name === 'NoSuchEntity' ||
-      e.$metadata?.httpStatusCode === 404
+      name === 'NotFound' ||
+      name === 'NoSuchEntity' ||
+      $metadata?.httpStatusCode === 404
     )
       return false
     throw e
@@ -53,7 +58,9 @@ if (!(await exists(() => s3.send(new HeadBucketCommand({ Bucket: bucket }))))) {
   await s3.send(
     new CreateBucketCommand({
       Bucket: bucket,
-      CreateBucketConfiguration: { LocationConstraint: region },
+      CreateBucketConfiguration: {
+        LocationConstraint: region as BucketLocationConstraint,
+      },
     }),
   )
   console.log(`created bucket ${bucket}`)
@@ -155,7 +162,7 @@ await iam.send(
 
 // .env holds one editor key: this site's. A key of another user (a previous
 // site) is replaced.
-const { AccessKeyMetadata: keys } = await iam.send(
+const { AccessKeyMetadata: keys = [] } = await iam.send(
   new ListAccessKeysCommand({ UserName: editorUser }),
 )
 if (
@@ -164,6 +171,7 @@ if (
   const { AccessKey } = await iam.send(
     new CreateAccessKeyCommand({ UserName: editorUser }),
   )
+  if (!AccessKey) throw new Error('IAM returned no access key')
   const env = readFileSync('.env', 'utf8')
     .split('\n')
     .filter(

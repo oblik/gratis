@@ -2,7 +2,7 @@
 // CNAME and Configuration Rule, every object version in the bucket, the bucket,
 // and the editor IAM user. Irreversible, so the bucket name must be repeated.
 //
-//   GRATIS_SITE=<bucket> node --env-file=.env scripts/teardown.js \
+//   GRATIS_SITE=<bucket> node --env-file=.env scripts/teardown.ts \
 //     --confirm <bucket>
 
 import {
@@ -21,13 +21,14 @@ import {
 } from '@aws-sdk/client-s3'
 
 import {
-  bucket,
-  cloudflareToken,
-  editorUser,
-  region,
-  websiteHost,
-  zone,
-} from './config.js'
+  cf,
+  findZone,
+  RULE_REF,
+  ruleExpression,
+  type DnsRecord,
+  type Ruleset,
+} from './cloudflare.ts'
+import { bucket, editorUser, region, websiteHost } from './config.ts'
 
 const confirm = process.argv[process.argv.indexOf('--confirm') + 1]
 if (!process.argv.includes('--confirm') || confirm !== bucket) {
@@ -36,25 +37,9 @@ if (!process.argv.includes('--confirm') || confirm !== bucket) {
   )
 }
 
-async function cf(method, path) {
-  const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${cloudflareToken}` },
-  })
-  const data = await res.json()
-  if (!data.success && res.status !== 404)
-    throw new Error(
-      `${method} ${path}: ${res.status} ${JSON.stringify(data.errors)}`,
-    )
-  return { status: res.status, ...data }
-}
-
 // Cloudflare: only the record and rule the setup script made.
-const {
-  result: [{ id: zoneId } = {}],
-} = await cf('GET', `/zones?name=${zone}`)
-if (!zoneId) throw new Error(`zone ${zone} not found`)
-const { result: records } = await cf(
+const { id: zoneId } = await findZone()
+const { result: records } = await cf<DnsRecord[]>(
   'GET',
   `/zones/${zoneId}/dns_records?name=${bucket}&type=CNAME`,
 )
@@ -62,16 +47,14 @@ for (const record of records.filter((r) => r.content === websiteHost)) {
   await cf('DELETE', `/zones/${zoneId}/dns_records/${record.id}`)
   console.log(`deleted CNAME ${bucket}`)
 }
-const entry = await cf(
+const entry = await cf<Ruleset | null>(
   'GET',
   `/zones/${zoneId}/rulesets/phases/http_config_settings/entrypoint`,
 )
 const rule = entry.result?.rules?.find(
-  (r) =>
-    r.ref === 'gratis_flexible_ssl' &&
-    r.expression === `(http.host eq "${bucket}")`,
+  (r) => r.ref === RULE_REF && r.expression === ruleExpression,
 )
-if (rule) {
+if (entry.result && rule) {
   await cf(
     'DELETE',
     `/zones/${zoneId}/rulesets/${entry.result.id}/rules/${rule.id}`,
@@ -83,7 +66,7 @@ if (rule) {
 // first.
 const s3 = new S3Client({ region })
 let deleted = 0
-for (let page = {}; ;) {
+for (let page: { key?: string; version?: string } = {}; ;) {
   const res = await s3.send(
     new ListObjectVersionsCommand({
       Bucket: bucket,
@@ -113,14 +96,14 @@ console.log(`deleted ${deleted} object version(s) and bucket ${bucket}`)
 const iam = new IAMClient({ region })
 for (const { AccessKeyId } of (
   await iam.send(new ListAccessKeysCommand({ UserName: editorUser }))
-).AccessKeyMetadata) {
+).AccessKeyMetadata ?? []) {
   await iam.send(
     new DeleteAccessKeyCommand({ UserName: editorUser, AccessKeyId }),
   )
 }
 for (const PolicyName of (
   await iam.send(new ListUserPoliciesCommand({ UserName: editorUser }))
-).PolicyNames) {
+).PolicyNames ?? []) {
   await iam.send(
     new DeleteUserPolicyCommand({ UserName: editorUser, PolicyName }),
   )

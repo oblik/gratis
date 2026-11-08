@@ -1,6 +1,11 @@
 ---
 import { eachBlock } from './template-mode.ts'
 
+interface Props<T> {
+  of: T[] | undefined
+  children: (item: T) => unknown
+}
+
 // Once per item; in the template pass, once for a placeholder item, between
 // markers.
 const { of } = Astro.props

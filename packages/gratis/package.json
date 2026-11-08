@@ -35,7 +35,7 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc",
-    "build": "tsc && vite build --config vite.admin.config.js"
+    "build": "tsc && vite build --config vite.admin.config.ts"
   },
   "files": [
     "src",

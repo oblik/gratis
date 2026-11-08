@@ -17,7 +17,8 @@ Non-goals:
 
 A pnpm workspace:
 
-- Commands: `pnpm build`, `pnpm test`, `pnpm test:e2e`, `pnpm run deploy`
+- Commands: `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm run deploy`
+- TypeScript only, no plain JavaScript, configs and scripts included. Node runs the `.ts` files as they are, so relative imports keep their `.ts` extension.
 - Tests sit next to their module as `<name>.test.ts` (Vitest). The slower end-to-end ones are in `e2e/`, and only `pnpm test:e2e` runs them.
 - `packages/gratis/src/`:
   - `core/`: framework-free, runs in the browser and in Node, imports none of the folders below

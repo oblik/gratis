@@ -2,7 +2,7 @@
 // a password. The password is GRATIS_EDITOR_PASSWORD, generated into .env on
 // first run. Nothing secret is printed.
 //
-//   node --env-file=.env scripts/create-editor.js admin
+//   node --env-file=.env scripts/create-editor.ts admin
 
 import { randomBytes } from 'node:crypto'
 import { appendFileSync } from 'node:fs'
@@ -10,12 +10,12 @@ import { appendFileSync } from 'node:fs'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 
 import { encryptCredentials } from '../packages/gratis/src/core/auth.ts'
-import { bucket, region, s3Endpoint } from './config.js'
+import { bucket, env, region, s3Endpoint } from './config.ts'
 
 const username = process.argv[2]
 if (!/^[a-z0-9_-]+$/.test(username ?? ''))
   throw new Error(
-    'usage: create-editor.js <username> (lowercase letters, digits, - and _)',
+    'usage: create-editor.ts <username> (lowercase letters, digits, - and _)',
   )
 
 let password = process.env.GRATIS_EDITOR_PASSWORD
@@ -27,8 +27,8 @@ if (!password) {
 
 const blob = await encryptCredentials(
   {
-    accessKeyId: process.env.GRATIS_EDITOR_ACCESS_KEY_ID,
-    secretAccessKey: process.env.GRATIS_EDITOR_SECRET_ACCESS_KEY,
+    accessKeyId: env('GRATIS_EDITOR_ACCESS_KEY_ID'),
+    secretAccessKey: env('GRATIS_EDITOR_SECRET_ACCESS_KEY'),
   },
   password,
   { endpoint: s3Endpoint, region },

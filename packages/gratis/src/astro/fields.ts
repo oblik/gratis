@@ -20,9 +20,17 @@ export const text = ({
   label?: string
   localized?: boolean
   multiline?: boolean
-} = {}): FieldConfig => ({ type: 'text', label, localized, multiline })
+} = {}): Extract<FieldConfig, { type: 'text' }> => ({
+  type: 'text',
+  label,
+  localized,
+  multiline,
+})
 
-export const boolean = ({ label }: { label?: string } = {}): FieldConfig => ({
+export const boolean = ({ label }: { label?: string } = {}): Extract<
+  FieldConfig,
+  { type: 'boolean' }
+> => ({
   type: 'boolean',
   label,
 })
