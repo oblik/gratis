@@ -99,7 +99,7 @@ const newEntry = createRoute({
 
 const collectionEntry = createRoute({
   getParentRoute: () => collection,
-  path: '/$id',
+  path: '/entry/$id',
   loader: ({ context: { site }, params: { name, id } }) =>
     readEntry(site, entryKey(name, id)),
   remountDeps: ({ params }) => params,

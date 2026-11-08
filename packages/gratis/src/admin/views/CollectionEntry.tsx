@@ -12,7 +12,7 @@ import { Status, type StatusMessage } from '../ui/Status.tsx'
 import { TextField } from '../ui/TextField.tsx'
 import { EntryForm } from './EntryForm.tsx'
 
-const editRoute = getRouteApi('/_app/collections/$name/$id')
+const editRoute = getRouteApi('/_app/collections/$name/entry/$id')
 const newRoute = getRouteApi('/_app/collections/$name/new')
 
 export function CollectionEntry() {
@@ -122,7 +122,7 @@ export function NewEntry() {
       // The saved draft is the entry's page now; nothing is left to discard.
       onSaved={() =>
         navigate({
-          to: '/collections/$name/$id',
+          to: '/collections/$name/entry/$id',
           params: { name, id },
           replace: true,
           ignoreBlocker: true,

@@ -43,7 +43,7 @@ export function Collection() {
           {ids.map((id) => (
             <li key={id}>
               <Link
-                to="/collections/$name/$id"
+                to="/collections/$name/entry/$id"
                 params={{ name, id }}
                 className={row}
               >
