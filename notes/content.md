@@ -47,7 +47,7 @@ A collection declared with Astro's own `defineCollection` is ignored by Gratis, 
 
 ## Files
 
-Entries are small files mirrored between the repo and the bucket, in whatever shape the loader reads them:
+Entries are small files mirrored between the repo and the bucket. In the repo they're in whatever shape the loader reads:
 
 - One JSON file per entry.
 - One JSON file per collection, keyed by ID.
@@ -57,7 +57,7 @@ Gratis ships its own `glob` and `file` loaders because it has to know where entr
 
 - `src/data/site.json` -> `/_gratis/content/site.json`
 - `src/data/posts/hello.json` -> `/_gratis/content/posts/hello.json`
-- `src/data/tags.json` -> `/_gratis/content/tags.json`
+- `src/data/tags.json`, its `travel` key -> `/_gratis/content/tags/travel.json`
 
 An entry file holds that entry's fields and nothing else; a localized field holds a locale map instead of a value (see [localization](localization.md)). IDs are what the loader gives them and double as route params, so they're slugs. Changing one is a delete plus a create.
 
@@ -69,7 +69,9 @@ Why many small files rather than one `content.json`:
 
 The cost is one shared index, below.
 
-A per-collection file is allowed where the developer wants it, with the stated cost that two editors saving different entries of it will conflict and one has to retry. The admin finds a collection's entries by listing its folder, so there is no entry index to keep in sync.
+In the bucket, every entry is an object of its own, whatever its shape in the repo. A per-collection file is only for the developer: a handful of tiny entries reads better as one file in Git, and a site already on Astro's `file()` keeps its data where it is. Only what works on the repo (the build, the dev server and pull) reads and writes it as one file, so editors on different entries of it never conflict either. Its key order isn't data: like any collection, it lists by ID unless a query sorts it, and every write sorts the file the same way.
+
+The admin finds a collection's entries by listing its folder, so there is no entry index to keep in sync.
 
 Markdown is rendered by Gratis's own implementation in every mode, never by Astro's remark pipeline, because the editor's browser has to produce the same HTML as the build. MDX is out.
 

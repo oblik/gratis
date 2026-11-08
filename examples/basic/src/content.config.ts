@@ -18,4 +18,12 @@ const posts = defineCollection({
   },
 })
 
-export const collections = { site, posts }
+const links = defineCollection({
+  loader: file('src/data/links.json'),
+  schema: {
+    title: text(),
+    url: text({ label: 'URL' }),
+  },
+})
+
+export const collections = { site, posts, links }

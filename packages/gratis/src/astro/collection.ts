@@ -38,8 +38,6 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
 }) {
   if (single && loader.kind !== 'file')
     throw new Error('gratis: a single needs file()')
-  if (!single && loader.kind !== 'glob')
-    throw new Error('gratis: a collection needs glob()')
   const position = defineCalls++
   const source =
     loader.kind === 'file' ? loader.path : loader.base.replace(/\/?$/, '/')
@@ -104,7 +102,7 @@ export function defineCollection<F extends Record<string, FieldConfig>>({
         // like Astro's loaders do.
         watcher?.add(path)
         const reload = (changed: string) =>
-          (single
+          (loader.kind === 'file'
             ? changed === path
             : changed.startsWith(path) && changed.endsWith('.json')) && sync()
         for (const event of ['change', 'add', 'unlink'] as const)

@@ -3,6 +3,7 @@ import { Each, getCollection, getEntry, If } from 'gratis/astro'
 
 const site = await getEntry('site')
 const posts = await getCollection('posts', { sort: '-date' })
+const links = await getCollection('links')
 ---
 
 <html lang="en">
@@ -28,6 +29,17 @@ const posts = await getCollection('posts', { sort: '-date' })
             <If when={post.featured}>
               <strong>Featured</strong>
             </If>
+          </li>
+        )}
+      </Each>
+    </ul>
+
+    <h2>Built with</h2>
+    <ul>
+      <Each of={links}>
+        {(link) => (
+          <li>
+            <a href={link.url}>{link.title}</a>
           </li>
         )}
       </Each>

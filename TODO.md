@@ -2,11 +2,11 @@
 
 Rough order. What's done is whatever the code does; see [CLAUDE.md](CLAUDE.md) for where things are.
 
-- `file()` collections
 - Uploads and `image` fields
 - Lexical for rich text
 - `reference` fields
 - `list` (repeater) fields
+- Custom order, opted into per collection (entries are in ID order otherwise): an index whose array is the order, or a fractional `sort` field on each entry
 - Localization handling and locale switcher
 - Admin layout: `tabs`, `section`, `row`
 - `sitemap.xml` as a pure function of `routes.json`, replacing `@astrojs/sitemap`

@@ -16,8 +16,8 @@ export interface Collection {
   single: boolean
   label: string
   /**
-   * In the repo: a single's file, or a folder (ending in `/`) with one JSON
-   * file per entry.
+   * In the repo: a single's file, a folder (ending in `/`) with one JSON file
+   * per entry, or one JSON file keyed by entry id.
    */
   source: string
   fields: Record<string, Field>

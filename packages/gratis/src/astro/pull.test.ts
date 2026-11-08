@@ -55,6 +55,43 @@ test('pull mirrors each collection, copies singles, and leaves a single missing 
   }
 })
 
+test("pull mirrors a shared file's entries into it, sorted by id", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'gratis-pull-'))
+  try {
+    await mkdir(join(dir, 'src/data'), { recursive: true })
+    const file = join(dir, 'src/data/tags.json')
+    await writeFile(
+      file,
+      json({ travel: { title: 'Old' }, cooking: { title: 'Cooking' } }),
+    )
+    const bucket = memoryBackend({
+      '_gratis/schema.json': json({
+        collections: {
+          tags: {
+            single: false,
+            label: 'Tags',
+            source: 'src/data/tags.json',
+            fields: { title: { type: 'text', label: 'Title' } },
+          },
+        },
+        bindings: {},
+      }),
+      '_gratis/content/tags/art.json': json({ title: 'Art' }),
+      '_gratis/content/tags/travel.json': json({ title: 'Travel' }),
+    })
+    const log: string[] = []
+    await pull(emulatedStorage(bucket), pathToFileURL(dir + '/'), (m) =>
+      log.push(m),
+    )
+    expect(await readFile(file, 'utf8')).toBe(
+      json({ art: { title: 'Art' }, travel: { title: 'Travel' } }),
+    )
+    expect(log).toStrictEqual(['pulled tags (2 entries) -> src/data/tags.json'])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('pull does nothing for a bucket that was never deployed', async () => {
   const log: string[] = []
   await pull(
